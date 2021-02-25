@@ -10,16 +10,10 @@ public class BackendApplication {
 
 	public static void main(String[] args) {
 
-		try {
 
-			System.out.println("Backend Stared");
-			Database.sqlSetup();
-			Utils.createFile();
-			SpringApplication.run(BackendApplication.class, args);
-
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		}
+		System.out.println("Backend Stared");
+		Database.sqlSetup();
+		SpringApplication.run(BackendApplication.class, args);
 	}
 
 }
