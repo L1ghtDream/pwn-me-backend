@@ -13,6 +13,9 @@ public class Database {
     public static String user = "pwnme";
     public static String password = "pwnme";
     public static int port = 3306;
+    
+    //Tables
+    public static String usersTable = "user";
 
     public static void sqlSetup() {
         try {
