@@ -17,8 +17,7 @@
 </head>
 <body style="margin: 0; padding: 0;">
 
-<p>Poti folosi codul <b>{token}</b>  in joc.</p>
-<p>Poti da click <a href=\"https://google.com\">IN LUCRU</a> pentru a folosi portalul online.</p>
+<p>Ceva nu a mers bine</p>
 
 </body>
 </html>

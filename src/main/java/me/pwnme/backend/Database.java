@@ -16,6 +16,7 @@ public class Database {
     
     //Tables
     public static String usersTable = "user";
+    public static String tokenTable = "token";
 
     public static void sqlSetup() {
         try {

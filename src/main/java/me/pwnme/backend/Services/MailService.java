@@ -35,6 +35,9 @@ public class MailService {
         Template template = freemarkerConfiguration.getTemplate(templateName);
         String html = FreeMarkerTemplateUtils.processTemplateIntoString(template, placeholders);
 
+        for(String key : placeholders.keySet())
+            html = html.replace("{" + key + "}", (String) placeholders.get(key));
+
         helper.setTo(mail.to);
         helper.setText(html, true);
         helper.setSubject(String.format(mail.subject, placeholders.get("email")));
