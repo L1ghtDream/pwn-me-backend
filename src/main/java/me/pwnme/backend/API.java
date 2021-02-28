@@ -5,10 +5,7 @@ import freemarker.template.*;
 import lombok.RequiredArgsConstructor;
 import me.pwnme.backend.Configuration.Config;
 import me.pwnme.backend.Configuration.ResetPasswordEmailProperties;
-import me.pwnme.backend.DTO.ForgotPasswordBody;
-import me.pwnme.backend.DTO.LoginBody;
-import me.pwnme.backend.DTO.Mail;
-import me.pwnme.backend.DTO.RegisterBody;
+import me.pwnme.backend.DTO.*;
 import me.pwnme.backend.Services.MailService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.ui.freemarker.FreeMarkerTemplateUtils;
@@ -39,9 +36,27 @@ public class API {
          1 -> Email already exists
          2 -> Invalid Credentials
          3 -> Email does not exist
+         4 -> Data can not be null or empty
         -1 -> SQL injection is not allowed
         -2 -> Internal Error
         -3 -> String format exploit is not allowed
+    */
+
+    //TODO: With login and register send a base64 encoded token
+    /*
+
+    token = Base64(
+    {
+        "email": "{email}",
+        "timeCreated": "{timeCreated}",
+        "timeExpire": "{timeExpire}",
+        "renewable": "{authToken}"
+    }
+    )
+
+    timeCreated = new Date().now();
+    timeExpire = timeCreated + 10m
+    authToken=sha256(base65(sha256(sha256(password)))
 
     */
 
@@ -57,21 +72,45 @@ public class API {
                 return "-3";
             if(body.password.contains("%"))
                 return "-3";
+            if(body.email.equals(""))
+                return "4";
+            if(body.password.equals(""))
+                return "4";
 
             String query = "SELECT * FROM `{table}` WHERE EMAIL='{email}'";
             query = query.replace("{table}", Database.usersTable);
             query = query.replace("{email}", body.email);
             PreparedStatement st = Database.connection.prepareStatement(query);
             ResultSet result = st.executeQuery();
-            if(result.next())
-                if(result.getInt("COUNT(*)")==1)
-                    if(result.getString("PASSWORD").equals(body.password))
-                        return "0";
+
+            query = "SELECT COUNT(*) FROM `{table}` WHERE EMAIL='{email}'";
+            query = query.replace("{table}", Database.usersTable);
+            query = query.replace("{email}", body.email);
+            PreparedStatement st1 = Database.connection.prepareStatement(query);
+            ResultSet result1 = st1.executeQuery();
+            if(result.next() && result1.next()){
+                if(result1.getInt("COUNT(*)")==1) {
+                    if (result.getString("PASSWORD").equals(body.password)) {
+                        String token = "{\"email\": \"{email}\",\"timeCreated\": \"{timeCreated}\",\"timeExpire\": \"{timeExpire}\",\"password\": \"{password}\"}";
+
+                        long time = new Date().getTime();
+
+                        token = token.replace("{email}", body.email);
+                        token = token.replace("{timeCreated}", String.valueOf(time));
+                        token = token.replace("{timeExpire}", String.valueOf(time + 600000L));
+                        token = token.replace("{password}", body.password);
+
+                        token = Utils.encodeBase64(token);
+
+                        return "0 " + token;
+                    }
+                }
+            }
             return "2";
 
 
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
         return "-2";
     }
@@ -88,6 +127,10 @@ public class API {
                 return "-3";
             if(body.password.contains("%"))
                 return "-3";
+            if(body.email.equals(""))
+                return "4";
+            if(body.password.equals(""))
+                return "4";
 
             String query = "SELECT COUNT(*) FROM `{table}` WHERE EMAIL='{email}'";
             query = query.replace("{table}", Database.usersTable);
@@ -104,7 +147,19 @@ public class API {
 
                     st = Database.connection.prepareStatement(query);
                     st.executeUpdate();
-                    return "0";
+
+                    String token = "{\"email\": \"{email}\",\"timeCreated\": \"{timeCreated}\",\"timeExpire\": \"{timeExpire}\",\"password\": \"{password}\"}";
+
+                    long time = new Date().getTime();
+
+                    token = token.replace("{email}", body.email);
+                    token = token.replace("{timeCreated}", String.valueOf(time));
+                    token = token.replace("{timeExpire}", String.valueOf(time + 600000L));
+                    token = token.replace("{password}", body.password);
+
+                    token = Utils.encodeBase64(token);
+
+                    return "0 " + token;
                 }
             return "1";
 
@@ -211,9 +266,8 @@ public class API {
         return "-2";
     }
 
-
-    @GetMapping("/api/reset-password")
-    public String resetPassword(@RequestParam String token){
+    @GetMapping("/reset-password")
+    public String resetPasswordMessage(@RequestParam String token){
 
         //TODO: Create the web portal for password reset
 
@@ -245,6 +299,28 @@ public class API {
         return "ERROR";
     }
 
+    @PostMapping("/api/reset-password")
+    public String resetPassword(@RequestBody ResetPasswordBody body){
 
+        //try {
+            if(body.token.contains(" "))
+                return "-1";
+            if(body.token.contains("%"))
+                return "-3";
+            if(body.email.contains(" "))
+                return "-1";
+            if(body.email.contains("%"))
+                return "-3";
+            if(body.newPassword.contains(" "))
+                return "-1";
+            if(body.newPassword.contains("%"))
+                return "-3";
 
+            return "0";
+
+        //} catch (SQLException | IOException | TemplateException e) {
+        //    e.printStackTrace();
+        //}
+        //return "-2";
+    }
 }

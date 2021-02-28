@@ -19,7 +19,7 @@
 
 <p>Salut {name},</p>
 <p>Ai solicitat o resetare de parola. Daca nu ai fost tu poti doar sa ignori acest mesaj</p>
-<p>Daca doresti sa continui resetarea parolei te rugam sa dai click <a href="https://{host}/api/reset-password?token={token}">aici</a></p>
+<p>Daca doresti sa continui resetarea parolei te rugam sa dai click <a href="https://{host}/reset-password?token={token}">aici</a></p>
 <p>Poti folosi codul <b>{token}</b> in joc.</p>
 
 </body>
