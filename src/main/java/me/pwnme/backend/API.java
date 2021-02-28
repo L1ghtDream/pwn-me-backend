@@ -1,19 +1,20 @@
 package me.pwnme.backend;
 
-import freemarker.core.ParseException;
-import freemarker.template.*;
+import com.google.gson.Gson;
+import freemarker.template.Configuration;
+import freemarker.template.Template;
+import freemarker.template.TemplateException;
 import lombok.RequiredArgsConstructor;
 import me.pwnme.backend.Configuration.Config;
 import me.pwnme.backend.Configuration.ResetPasswordEmailProperties;
 import me.pwnme.backend.DTO.*;
 import me.pwnme.backend.Services.MailService;
-import org.springframework.http.ResponseEntity;
+import org.springframework.boot.json.GsonJsonParser;
 import org.springframework.ui.freemarker.FreeMarkerTemplateUtils;
 import org.springframework.web.bind.annotation.*;
 
 import javax.mail.MessagingException;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -37,30 +38,15 @@ public class API {
          2 -> Invalid Credentials
          3 -> Email does not exist
          4 -> Data can not be null or empty
+         5 -> Token is invalid
         -1 -> SQL injection is not allowed
         -2 -> Internal Error
         -3 -> String format exploit is not allowed
     */
 
     //TODO: With login and register send a base64 encoded token
-    /*
 
-    token = Base64(
-    {
-        "email": "{email}",
-        "timeCreated": "{timeCreated}",
-        "timeExpire": "{timeExpire}",
-        "renewable": "{authToken}"
-    }
-    )
-
-    timeCreated = new Date().now();
-    timeExpire = timeCreated + 10m
-    authToken=sha256(base65(sha256(sha256(password)))
-
-    */
-
-    @PostMapping("/api/login")
+    @PostMapping("/api/login/credentials")
     public String login(@RequestBody LoginBody body) {
 
         try {
@@ -112,6 +98,61 @@ public class API {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+        return "-2";
+    }
+
+    @PostMapping("/api/login/token")
+    public String loginToken(@RequestBody LoginTokenBody body) {
+
+        //try {
+            if(body.token.contains(" "))
+                return "-1";
+            if(body.token.contains("%"))
+                return "-3";
+            if(body.token.equals(""))
+                return "-5";
+
+            Gson gson = new Gson();
+            Token token = gson.fromJson(Utils.decodeBase64(body.token), Token.class);
+
+            //TODO: Check the token
+            /*
+            String query = "SELECT * FROM `{table}` WHERE EMAIL='{email}'";
+            query = query.replace("{table}", Database.usersTable);
+            query = query.replace("{email}", body.email);
+            PreparedStatement st = Database.connection.prepareStatement(query);
+            ResultSet result = st.executeQuery();
+
+            query = "SELECT COUNT(*) FROM `{table}` WHERE EMAIL='{email}'";
+            query = query.replace("{table}", Database.usersTable);
+            query = query.replace("{email}", body.email);
+            PreparedStatement st1 = Database.connection.prepareStatement(query);
+            ResultSet result1 = st1.executeQuery();
+            if(result.next() && result1.next()){
+                if(result1.getInt("COUNT(*)")==1) {
+                    if (result.getString("PASSWORD").equals(body.password)) {
+                        String token = "{\"email\": \"{email}\",\"timeCreated\": \"{timeCreated}\",\"timeExpire\": \"{timeExpire}\",\"password\": \"{password}\"}";
+
+                        long time = new Date().getTime();
+
+                        token = token.replace("{email}", body.email);
+                        token = token.replace("{timeCreated}", String.valueOf(time));
+                        token = token.replace("{timeExpire}", String.valueOf(time + 600000L));
+                        token = token.replace("{password}", body.password);
+
+                        token = Utils.encodeBase64(token);
+
+                        return "0 " + token;
+                    }
+                }
+            }
+
+            return "2";
+            */
+
+        /*} catch (SQLException e) {
+            e.printStackTrace();
+        }*/
         return "-2";
     }
 
@@ -210,8 +251,6 @@ public class API {
                             return "-2";
                     }
 
-
-
                     query = "SELECT COUNT(*) FROM `{table}` WHERE EMAIL='{email}'";
                     query = query.replace("{table}", Database.tokenTable);
                     query = query.replace("{email}", body.email);
@@ -245,10 +284,6 @@ public class API {
                     else
                         return "-2";
 
-
-
-
-
                     Map<String, Object> placeholders = new HashMap<>();
                     placeholders.put("name", "Anonymous");
                     placeholders.put("host", config.host);
@@ -260,7 +295,7 @@ public class API {
             return "3";
 
 
-        } catch (SQLException | MessagingException | IOException | TemplateException e) {
+        } catch (SQLException | IOException | TemplateException | MessagingException e) {
             e.printStackTrace();
         }
         return "-2";
