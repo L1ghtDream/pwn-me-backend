@@ -1,8 +1,6 @@
 package me.pwnme.backend;
 
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.Random;
+import java.util.*;
 
 public class Utils {
 
@@ -12,7 +10,7 @@ public class Utils {
     }
 
     public static String decodeBase64(String encodedData){
-        return Arrays.toString(Base64.getDecoder().decode(encodedData.getBytes()));
+        return new String(Base64.getDecoder().decode(encodedData));
     }
 
     public static String generateRandomString(int length) {
@@ -36,6 +34,15 @@ public class Utils {
         return (int) ((Math.random() * (max - min)) + min);
     }
 
-
-    
+    public static String checkForVulns(List<String> check){
+        for(String str : check){
+            if(str.contains("%"))
+                return Response.string_format;
+            if(str.contains(" "))
+                return Response.sql_injection;
+            if(str.equals(" "))
+                return Response.null_or_empty_data;
+        }
+        return "0";
+    }
 }
