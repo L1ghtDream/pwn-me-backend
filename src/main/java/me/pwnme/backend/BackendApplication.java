@@ -15,6 +15,7 @@ public class BackendApplication {
 		System.out.println(Utils.decodeBase64("NA"));
 
 		System.out.println(Utils.customEncode("12ab"));
+		System.out.println(Utils.customDecode(Utils.customEncode("12ab")));
 
 		System.out.println("Backend Stared");
 		Database.sqlSetup();

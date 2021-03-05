@@ -1,5 +1,6 @@
 package me.pwnme.backend;
 
+import java.sql.Array;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.*;
@@ -143,9 +144,44 @@ public class Utils {
         return (encodeBase64(String.valueOf(var5+1)) + (char) separatorCharacter + encodedData).replace("=", "");
     }
 
+
     public static String customDecode(String encodedData){
-        String[] var1 = encodedData.split(String.valueOf((char)separatorCharacter));
-        Integer var2 = Integer.parseInt(decodeBase64(var1[0]));
+
+        String[] var1 = encodedData.split("\\?");
+        int n = Integer.parseInt(decodeBase64(var1[0]));
         String data = var1[1];
+        ArrayList<Integer> var3 = new ArrayList<>();
+
+
+        for(int i=0;i<data.length()/n;i++){
+            int var4 = 0;
+            for(int j=0;j<n;j++){
+                char var5 = data.charAt(i * n + j);
+                if(var5 != nullCharacter)
+                    var4 += Math.pow(chars.size(), n-j-1) * chars.indexOf(var5);
+            }
+            var3.add(var4);
+        }
+
+        if(var3.size()<3)
+            return "";
+
+        ArrayList<Integer> var5 = new ArrayList<>();
+        var5.add(0);
+        var5.add(var3.get(var3.size()-2)/var3.get(var3.size()-1));
+        var5.add(var3.get(1)/var3.get(0));
+        var5.set(0, var3.get(0)/var5.get(1));
+
+        for(int i=2;i<n-1;i++)
+            var5.add(var3.get(i)/var5.get(i)/var5.get(i-1));
+
+        StringBuilder output = new StringBuilder();
+
+        for(int var6 : var5)
+            output.append((char) var6);
+
+        return output.toString();
+
     }
+
 }
