@@ -1,11 +1,14 @@
-package me.pwnme.backend;
+package me.pwnme.backend.Utils;
 
 import com.google.gson.Gson;
+import com.mysql.jdbc.log.Log;
 import freemarker.template.*;
 import lombok.RequiredArgsConstructor;
 import me.pwnme.backend.Configuration.*;
 import me.pwnme.backend.DTO.*;
+import me.pwnme.backend.Database.Database;
 import me.pwnme.backend.Services.MailService;
+import org.assertj.core.annotations.Beta;
 import org.springframework.ui.freemarker.FreeMarkerTemplateUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,8 +28,9 @@ public class API {
     private final Config config;
     private final Configuration freemarkerConfiguration;
 
-    @PostMapping("/api/login/credentials")
-    public String login(@RequestBody LoginBody body) {
+    @Deprecated
+    @PostMapping("/api/legacy/login/credentials")
+    public String loginLegacy(@RequestBody LoginBody body) {
 
         try {
             String vulns = Utils.checkForVulns(Arrays.asList(body.password, body.email));
@@ -54,8 +58,9 @@ public class API {
         }
     }
 
-    @PostMapping("/api/login/token")
-    public String loginToken(@RequestBody LoginTokenBody body) {
+    @Deprecated
+    @PostMapping("/api/legacy/login/token")
+    public String loginTokenLegacy(@RequestBody LoginTokenBody body) {
 
         try {
             String vulns = Utils.checkForVulns(Collections.singletonList(body.token));
@@ -98,8 +103,9 @@ public class API {
         }
     }
 
-    @PostMapping("/api/register")
-    public String register(@RequestBody RegisterBody body){
+    @Deprecated
+    @PostMapping("/api/legacy/register")
+    public String registerLegacy(@RequestBody RegisterBody body){
 
         try {
 
@@ -124,14 +130,121 @@ public class API {
         }
     }
 
-    //TODO: Update to the new API
-    //TODO: Add expire date atribute to reset password token
+
+
+    @PostMapping("/api/secure/login/credentials")
+    public String login(@RequestBody String data) {
+
+        try {
+            LoginBody body = new Gson().fromJson(Utils.customDecode(data), LoginBody.class);
+
+            String vulns = Utils.checkForVulns(Arrays.asList(body.password, body.email));
+            if(!vulns.equals(Response.ok))
+                return vulns;
+
+            ResultSet result = Utils.getPreparedStatement("SELECT * FROM ? WHERE EMAIL=?", Arrays.asList(Database.usersTable, body.email)).executeQuery();
+            ResultSet result1 = Utils.getPreparedStatement("SELECT COUNT(*) FROM ? WHERE EMAIL=?", Arrays.asList(Database.usersTable, body.email)).executeQuery();
+
+            if(result.next() && result1.next()){
+                if(result1.getInt("COUNT(*)")==1) {
+                    if (result.getString("PASSWORD").equals(body.password)) {
+                        long time = new Date().getTime();
+                        return Response.ok + " " + Utils.encodeBase64(Utils.craftToken(body.email, String.valueOf(time), String.valueOf(time + 259200000L + Utils.getBonusTimeFromToken(body.password)), body.password));
+                    }
+                    return Response.invalid_credentials;
+                }
+                return Response.multiple_accounts_on_email;
+            }
+            return Response.email_does_not_exist;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return Response.internal_error;
+        }
+    }
+
+    @PostMapping("/api/secure/login/token")
+    public String loginToken(@RequestBody String data) {
+
+        try {
+            Token body = new Gson().fromJson(Utils.customDecode(data), Token.class);
+
+            String vulns = Utils.checkForVulns(Collections.singletonList(body.token));
+            if(!vulns.equals(Response.ok))
+                return vulns;
+
+            Gson gson = new Gson();
+
+            Token token = gson.fromJson(Utils.decodeBase64(body.token), Token.class);
+
+            vulns = Utils.checkForVulns(Arrays.asList(token.password, token.email));
+            if(!vulns.equals(Response.ok))
+                return vulns;
+
+            ResultSet result = Utils.getPreparedStatement("SELECT COUNT(*) FROM ? WHERE EMAIL=?", Arrays.asList(Database.usersTable, token.email)).executeQuery();
+
+            if(result.next()){
+                if(result.getInt("COUNT(*)") == 1){
+
+                    if(Long.parseLong(token.timeExpire) < new Date().getTime())
+                        return Response.token_expired;
+                    if(Long.parseLong(token.timeExpire)-Long.parseLong(token.timeCreated) != 259200000L + Utils.getBonusTimeFromToken(token.password))
+                        return Response.invalid_token;
+
+                    result = Utils.getPreparedStatement("SELECT PASSWORD FROM ? WHERE EMAIL=?", Arrays.asList(Database.usersTable, token.email)).executeQuery();
+
+                    if(result.next()){
+                        if(result.getString("PASSWORD").equals(token.password))
+                            return Response.ok;
+                        return Response.invalid_credentials;
+                    }
+                    return Response.email_does_not_exist;
+                }
+                return Response.multiple_accounts_on_email;
+            }
+            return Response.email_does_not_exist;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return Response.internal_error;
+        }
+    }
+
+    @PostMapping("/api/secure/register")
+    public String register(@RequestBody String data){
+
+        try {
+            RegisterBody body = new Gson().fromJson(Utils.customDecode(data), RegisterBody.class);
+
+            String vulns = Utils.checkForVulns(Arrays.asList(body.email, body.password));
+            if(!vulns.equals(Response.ok))
+                return vulns;
+
+            ResultSet result = Utils.getPreparedStatement("SELECT COUNT(*) FROM ? WHERE EMAIL=?", Arrays.asList(Database.usersTable, body.email)).executeQuery();
+
+            if(result.next()){
+                if(result.getInt("COUNT(*)")==0){
+                    Utils.getPreparedStatement("INSERT INTO ? VALUES (?, ?)", Arrays.asList(Database.usersTable, body.email, body.password)).executeUpdate();
+                    long time = new Date().getTime();
+                    return Response.ok + " " + Utils.encodeBase64(Utils.craftToken(body.email, String.valueOf(time),  String.valueOf(time + 259200000L + Utils.getBonusTimeFromToken(body.password)), body.password));
+                }
+                return Response.email_already_exists;
+            }
+            return Response.internal_error;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return Response.internal_error;
+        }
+    }
+
+
+
+    @Beta //TODO: Update to the new API || Add expire date atribute to reset password token
     @PostMapping("/api/forgot-password")
     public String forgotPassword(@RequestBody ForgotPasswordBody body){
 
         //TODO: Recode
         try {
-            String vulns = Utils.checkForVulns(Arrays.asList(body.email));
+            String vulns = Utils.checkForVulns(Collections.singletonList(body.email));
             if(!vulns.equals(Response.ok))
                 return vulns;
 
@@ -210,14 +323,14 @@ public class API {
         return Response.internal_error;
     }
 
-    //TODO: Update to the new API
+    @Beta //TODO: Update to the new API
     @GetMapping("/reset-password")
     public String resetPasswordMessage(@RequestParam String token){
 
         //TODO: Create the web portal for password reset
 
         try {
-            String vulns = Utils.checkForVulns(Arrays.asList(token));
+            String vulns = Utils.checkForVulns(Collections.singletonList(token));
             if(!vulns.equals(Response.ok))
                 return vulns;
 
@@ -244,7 +357,7 @@ public class API {
         return "ERROR";
     }
 
-    //TODO: Update to the new API
+    @Beta //TODO: Update to the new API
     @PostMapping("/api/reset-password")
     public String resetPassword(@RequestBody ResetPasswordBody body){
 

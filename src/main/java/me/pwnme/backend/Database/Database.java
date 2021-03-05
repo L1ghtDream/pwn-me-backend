@@ -1,4 +1,4 @@
-package me.pwnme.backend;
+package me.pwnme.backend.Database;
 
 import java.sql.Connection;
 import java.sql.DriverManager;

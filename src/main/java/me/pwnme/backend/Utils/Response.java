@@ -1,4 +1,4 @@
-package me.pwnme.backend;
+package me.pwnme.backend.Utils;
 
 public class Response {
 

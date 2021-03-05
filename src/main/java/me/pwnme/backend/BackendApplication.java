@@ -1,9 +1,9 @@
 package me.pwnme.backend;
 
+import me.pwnme.backend.Database.Database;
+import me.pwnme.backend.Utils.Utils;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-
-import java.io.FileNotFoundException;
 
 @SpringBootApplication
 public class BackendApplication {

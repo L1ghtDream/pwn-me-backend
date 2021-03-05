@@ -1,6 +1,7 @@
-package me.pwnme.backend;
+package me.pwnme.backend.Utils;
 
-import java.sql.Array;
+import me.pwnme.backend.Database.Database;
+
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.*;
