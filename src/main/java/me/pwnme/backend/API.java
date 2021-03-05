@@ -1,15 +1,11 @@
 package me.pwnme.backend;
 
 import com.google.gson.Gson;
-import freemarker.template.Configuration;
-import freemarker.template.Template;
-import freemarker.template.TemplateException;
+import freemarker.template.*;
 import lombok.RequiredArgsConstructor;
-import me.pwnme.backend.Configuration.Config;
-import me.pwnme.backend.Configuration.ResetPasswordEmailProperties;
+import me.pwnme.backend.Configuration.*;
 import me.pwnme.backend.DTO.*;
 import me.pwnme.backend.Services.MailService;
-import org.springframework.boot.json.GsonJsonParser;
 import org.springframework.ui.freemarker.FreeMarkerTemplateUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -37,32 +33,14 @@ public class API {
             if(!vulns.equals(Response.ok))
                 return vulns;
 
-            String query = "SELECT * FROM `{table}` WHERE EMAIL='{email}'";
-            query = query.replace("{table}", Database.usersTable);
-            query = query.replace("{email}", body.email);
-            PreparedStatement st = Database.connection.prepareStatement(query);
-            ResultSet result = st.executeQuery();
+            ResultSet result = Utils.getPreparedStatement("SELECT * FROM ? WHERE EMAIL=?", Arrays.asList(Database.usersTable, body.email)).executeQuery();
+            ResultSet result1 = Utils.getPreparedStatement("SELECT COUNT(*) FROM ? WHERE EMAIL=?", Arrays.asList(Database.usersTable, body.email)).executeQuery();
 
-            query = "SELECT COUNT(*) FROM `{table}` WHERE EMAIL='{email}'";
-            query = query.replace("{table}", Database.usersTable);
-            query = query.replace("{email}", body.email);
-            PreparedStatement st1 = Database.connection.prepareStatement(query);
-            ResultSet result1 = st1.executeQuery();
             if(result.next() && result1.next()){
                 if(result1.getInt("COUNT(*)")==1) {
                     if (result.getString("PASSWORD").equals(body.password)) {
-                        String token = "{\"email\": \"{email}\",\"timeCreated\": \"{timeCreated}\",\"timeExpire\": \"{timeExpire}\",\"password\": \"{password}\"}";
-
                         long time = new Date().getTime();
-
-                        token = token.replace("{email}", body.email);
-                        token = token.replace("{timeCreated}", String.valueOf(time));
-                        token = token.replace("{timeExpire}", String.valueOf(time + 600000L));
-                        token = token.replace("{password}", body.password);
-
-                        token = Utils.encodeBase64(token);
-
-                        return Response.ok + " " + token;
+                        return Response.ok + " " + Utils.encodeBase64(Utils.craftToken(body.email, String.valueOf(time), String.valueOf(time + 259200000L + Utils.getBonusTimeFromToken(body.password)), body.password));
                     }
                     return Response.invalid_credentials;
                 }
@@ -72,15 +50,15 @@ public class API {
 
         } catch (SQLException e) {
             e.printStackTrace();
+            return Response.internal_error;
         }
-        return Response.internal_error;
     }
 
     @PostMapping("/api/login/token")
     public String loginToken(@RequestBody LoginTokenBody body) {
 
         try {
-            String vulns = Utils.checkForVulns(Arrays.asList(body.token));
+            String vulns = Utils.checkForVulns(Collections.singletonList(body.token));
             if(!vulns.equals(Response.ok))
                 return vulns;
 
@@ -92,22 +70,18 @@ public class API {
             if(!vulns.equals(Response.ok))
                 return vulns;
 
-            String query = "SELECT COUNT(*) FROM `{table}` WHERE EMAIL='{email}'";
-            query = query.replace("{table}", Database.usersTable);
-            query = query.replace("{email}", token.email);
-            PreparedStatement st = Database.connection.prepareStatement(query);
-            ResultSet result = st.executeQuery();
+            ResultSet result = Utils.getPreparedStatement("SELECT COUNT(*) FROM ? WHERE EMAIL=?", Arrays.asList(Database.usersTable, token.email)).executeQuery();
 
             if(result.next()){
                 if(result.getInt("COUNT(*)") == 1){
 
-                    //TODO: Check for the expire date
+                    if(Long.parseLong(token.timeExpire) < new Date().getTime())
+                        return Response.token_expired;
+                    if(Long.parseLong(token.timeExpire)-Long.parseLong(token.timeCreated) != 259200000L + Utils.getBonusTimeFromToken(token.password))
+                        return Response.invalid_token;
 
-                    query = "SELECT PASSWORD FROM `{table}` WHERE EMAIL='{email}'";
-                    query = query.replace("{table}", Database.usersTable);
-                    query = query.replace("{email}", token.email);
-                    st = Database.connection.prepareStatement(query);
-                    result = st.executeQuery();
+                    result = Utils.getPreparedStatement("SELECT PASSWORD FROM ? WHERE EMAIL=?", Arrays.asList(Database.usersTable, token.email)).executeQuery();
+
                     if(result.next()){
                         if(result.getString("PASSWORD").equals(token.password))
                             return Response.ok;
@@ -120,8 +94,8 @@ public class API {
             return Response.email_does_not_exist;
         } catch (SQLException e) {
             e.printStackTrace();
+            return Response.internal_error;
         }
-        return Response.internal_error;
     }
 
     @PostMapping("/api/register")
@@ -133,48 +107,24 @@ public class API {
             if(!vulns.equals(Response.ok))
                 return vulns;
 
-            String query = "SELECT COUNT(*) FROM `{table}` WHERE EMAIL='{email}'";
-            query = query.replace("{table}", Database.usersTable);
-            query = query.replace("{email}", body.email);
-
-            PreparedStatement st = Database.connection.prepareStatement(query);
-            ResultSet result = st.executeQuery();
+            ResultSet result = Utils.getPreparedStatement("SELECT COUNT(*) FROM ? WHERE EMAIL=?", Arrays.asList(Database.usersTable, body.email)).executeQuery();
 
             if(result.next()){
                 if(result.getInt("COUNT(*)")==0){
-                    query = "INSERT INTO `{table}` VALUES ('{email}', '{password}')";
-                    query = query.replace("{table}", Database.usersTable);
-                    query = query.replace("{email}", body.email);
-                    query = query.replace("{password}", body.password);
-
-                    st = Database.connection.prepareStatement(query);
-                    st.executeUpdate();
-
-                    String token = "{\"email\": \"{email}\",\"timeCreated\": \"{timeCreated}\",\"timeExpire\": \"{timeExpire}\",\"password\": \"{password}\"}";
-
+                    Utils.getPreparedStatement("INSERT INTO ? VALUES (?, ?)", Arrays.asList(Database.usersTable, body.email, body.password)).executeUpdate();
                     long time = new Date().getTime();
-
-                    token = token.replace("{email}", body.email);
-                    token = token.replace("{timeCreated}", String.valueOf(time));
-                    token = token.replace("{timeExpire}", String.valueOf(time + 600000L));
-                    token = token.replace("{password}", body.password);
-
-                    token = Utils.encodeBase64(token);
-
-                    return Response.ok + " " + token;
+                    return Response.ok + " " + Utils.encodeBase64(Utils.craftToken(body.email, String.valueOf(time),  String.valueOf(time + 259200000L + Utils.getBonusTimeFromToken(body.password)), body.password));
                 }
                 return Response.email_already_exists;
             }
             return Response.internal_error;
-
-
-
         } catch (SQLException e) {
             e.printStackTrace();
+            return Response.internal_error;
         }
-        return Response.internal_error;
     }
 
+    //TODO: Update to the new API
     //TODO: Add expire date atribute to reset password token
     @PostMapping("/api/forgot-password")
     public String forgotPassword(@RequestBody ForgotPasswordBody body){
@@ -260,6 +210,7 @@ public class API {
         return Response.internal_error;
     }
 
+    //TODO: Update to the new API
     @GetMapping("/reset-password")
     public String resetPasswordMessage(@RequestParam String token){
 
@@ -293,6 +244,7 @@ public class API {
         return "ERROR";
     }
 
+    //TODO: Update to the new API
     @PostMapping("/api/reset-password")
     public String resetPassword(@RequestBody ResetPasswordBody body){
 
