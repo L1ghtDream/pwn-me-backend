@@ -170,7 +170,7 @@ public class API {
     public String loginToken(@RequestBody String data) {
 
         try {
-            Token body = new Gson().fromJson(Utils.customDecode(data), Token.class);
+            LoginTokenBody body = new Gson().fromJson(Utils.customDecode(data), LoginTokenBody.class);
 
             String vulns = Utils.checkForVulns(Collections.singletonList(body.token));
             if(!vulns.equals(Response.ok))

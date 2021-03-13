@@ -44,6 +44,8 @@ public class Utils {
 
     public static String checkForVulns(List<String> check){
         for(String str : check){
+            if(str == null)
+                return Response.null_or_empty_data;
             if(str.contains("%"))
                 return Response.string_format;
             if(str.contains(" "))
