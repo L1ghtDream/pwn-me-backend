@@ -1,4 +1,4 @@
-package me.pwnme.backend.Utils;
+package me.pwnme.backend;
 
 import com.google.gson.Gson;
 import com.mysql.jdbc.log.Log;
@@ -8,7 +8,10 @@ import me.pwnme.backend.Configuration.*;
 import me.pwnme.backend.DTO.*;
 import me.pwnme.backend.Database.Database;
 import me.pwnme.backend.Services.MailService;
+import me.pwnme.backend.Utils.Response;
+import me.pwnme.backend.Utils.Utils;
 import org.assertj.core.annotations.Beta;
+import org.assertj.core.internal.bytebuddy.asm.Advice;
 import org.springframework.ui.freemarker.FreeMarkerTemplateUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -37,8 +40,8 @@ public class API {
             if(!vulns.equals(Response.ok))
                 return vulns;
 
-            ResultSet result = Utils.getPreparedStatement("SELECT * FROM ? WHERE EMAIL=?", Arrays.asList(Database.usersTable, body.email)).executeQuery();
-            ResultSet result1 = Utils.getPreparedStatement("SELECT COUNT(*) FROM ? WHERE EMAIL=?", Arrays.asList(Database.usersTable, body.email)).executeQuery();
+            ResultSet result = Utils.getPreparedStatement("SELECT * FROM `?` WHERE EMAIL='?'", Arrays.asList(Database.usersTable, body.email)).executeQuery();
+            ResultSet result1 = Utils.getPreparedStatement("SELECT COUNT(*) FROM `?` WHERE EMAIL='?'", Arrays.asList(Database.usersTable, body.email)).executeQuery();
 
             if(result.next() && result1.next()){
                 if(result1.getInt("COUNT(*)")==1) {
@@ -75,7 +78,7 @@ public class API {
             if(!vulns.equals(Response.ok))
                 return vulns;
 
-            ResultSet result = Utils.getPreparedStatement("SELECT COUNT(*) FROM ? WHERE EMAIL=?", Arrays.asList(Database.usersTable, token.email)).executeQuery();
+            ResultSet result = Utils.getPreparedStatement("SELECT COUNT(*) FROM `?` WHERE EMAIL='?'", Arrays.asList(Database.usersTable, token.email)).executeQuery();
 
             if(result.next()){
                 if(result.getInt("COUNT(*)") == 1){
@@ -85,7 +88,7 @@ public class API {
                     if(Long.parseLong(token.timeExpire)-Long.parseLong(token.timeCreated) != 259200000L + Utils.getBonusTimeFromToken(token.password))
                         return Response.invalid_token;
 
-                    result = Utils.getPreparedStatement("SELECT PASSWORD FROM ? WHERE EMAIL=?", Arrays.asList(Database.usersTable, token.email)).executeQuery();
+                    result = Utils.getPreparedStatement("SELECT PASSWORD FROM `?` WHERE EMAIL='?'", Arrays.asList(Database.usersTable, token.email)).executeQuery();
 
                     if(result.next()){
                         if(result.getString("PASSWORD").equals(token.password))
@@ -113,11 +116,11 @@ public class API {
             if(!vulns.equals(Response.ok))
                 return vulns;
 
-            ResultSet result = Utils.getPreparedStatement("SELECT COUNT(*) FROM ? WHERE EMAIL=?", Arrays.asList(Database.usersTable, body.email)).executeQuery();
+            ResultSet result = Utils.getPreparedStatement("SELECT COUNT(*) FROM `?` WHERE EMAIL='?'", Arrays.asList(Database.usersTable, body.email)).executeQuery();
 
             if(result.next()){
                 if(result.getInt("COUNT(*)")==0){
-                    Utils.getPreparedStatement("INSERT INTO ? VALUES (?, ?)", Arrays.asList(Database.usersTable, body.email, body.password)).executeUpdate();
+                    Utils.getPreparedStatement("INSERT INTO '?' VALUES ('?', '?')", Arrays.asList(Database.usersTable, body.email, body.password)).executeUpdate();
                     long time = new Date().getTime();
                     return Response.ok + " " + Utils.encodeBase64(Utils.craftToken(body.email, String.valueOf(time),  String.valueOf(time + 259200000L + Utils.getBonusTimeFromToken(body.password)), body.password));
                 }
@@ -142,8 +145,8 @@ public class API {
             if(!vulns.equals(Response.ok))
                 return vulns;
 
-            ResultSet result = Utils.getPreparedStatement("SELECT * FROM ? WHERE EMAIL=?", Arrays.asList(Database.usersTable, body.email)).executeQuery();
-            ResultSet result1 = Utils.getPreparedStatement("SELECT COUNT(*) FROM ? WHERE EMAIL=?", Arrays.asList(Database.usersTable, body.email)).executeQuery();
+            ResultSet result = Utils.getPreparedStatement("SELECT * FROM `?` WHERE EMAIL='?'", Arrays.asList(Database.usersTable, body.email)).executeQuery();
+            ResultSet result1 = Utils.getPreparedStatement("SELECT COUNT(*) FROM `?` WHERE EMAIL='?'", Arrays.asList(Database.usersTable, body.email)).executeQuery();
 
             if(result.next() && result1.next()){
                 if(result1.getInt("COUNT(*)")==1) {
@@ -181,7 +184,7 @@ public class API {
             if(!vulns.equals(Response.ok))
                 return vulns;
 
-            ResultSet result = Utils.getPreparedStatement("SELECT COUNT(*) FROM ? WHERE EMAIL=?", Arrays.asList(Database.usersTable, token.email)).executeQuery();
+            ResultSet result = Utils.getPreparedStatement("SELECT COUNT(*) FROM `?` WHERE EMAIL='?'", Arrays.asList(Database.usersTable, token.email)).executeQuery();
 
             if(result.next()){
                 if(result.getInt("COUNT(*)") == 1){
@@ -191,7 +194,7 @@ public class API {
                     if(Long.parseLong(token.timeExpire)-Long.parseLong(token.timeCreated) != 259200000L + Utils.getBonusTimeFromToken(token.password))
                         return Response.invalid_token;
 
-                    result = Utils.getPreparedStatement("SELECT PASSWORD FROM ? WHERE EMAIL=?", Arrays.asList(Database.usersTable, token.email)).executeQuery();
+                    result = Utils.getPreparedStatement("SELECT PASSWORD FROM `?` WHERE EMAIL='?'", Arrays.asList(Database.usersTable, token.email)).executeQuery();
 
                     if(result.next()){
                         if(result.getString("PASSWORD").equals(token.password))
@@ -219,11 +222,11 @@ public class API {
             if(!vulns.equals(Response.ok))
                 return vulns;
 
-            ResultSet result = Utils.getPreparedStatement("SELECT COUNT(*) FROM ? WHERE EMAIL=?", Arrays.asList(Database.usersTable, body.email)).executeQuery();
+            ResultSet result = Utils.getPreparedStatement("SELECT COUNT(*) FROM `?` WHERE EMAIL='?'", Arrays.asList(Database.usersTable, body.email)).executeQuery();
 
             if(result.next()){
                 if(result.getInt("COUNT(*)")==0){
-                    Utils.getPreparedStatement("INSERT INTO ? VALUES (?, ?)", Arrays.asList(Database.usersTable, body.email, body.password)).executeUpdate();
+                    Utils.getPreparedStatement("INSERT INTO '?' VALUES ('?', '?')", Arrays.asList(Database.usersTable, body.email, body.password)).executeUpdate();
                     long time = new Date().getTime();
                     return Response.ok + " " + Utils.encodeBase64(Utils.craftToken(body.email, String.valueOf(time),  String.valueOf(time + 259200000L + Utils.getBonusTimeFromToken(body.password)), body.password));
                 }
@@ -238,7 +241,7 @@ public class API {
 
 
 
-    @Beta //TODO: Update to the new API || Add expire date atribute to reset password token
+    @Beta //TODO: Update to the new me.pwnme.backend.API || Add expire date atribute to reset password token
     @PostMapping("/api/forgot-password")
     public String forgotPassword(@RequestBody ForgotPasswordBody body){
 
@@ -323,7 +326,7 @@ public class API {
         return Response.internal_error;
     }
 
-    @Beta //TODO: Update to the new API
+    @Beta //TODO: Update to the new me.pwnme.backend.API
     @GetMapping("/reset-password")
     public String resetPasswordMessage(@RequestParam String token){
 
@@ -357,7 +360,7 @@ public class API {
         return "ERROR";
     }
 
-    @Beta //TODO: Update to the new API
+    @Beta //TODO: Update to the new me.pwnme.backend.API
     @PostMapping("/api/reset-password")
     public String resetPassword(@RequestBody ResetPasswordBody body){
 

@@ -48,15 +48,13 @@ public class Utils {
                 return Response.string_format;
             if(str.contains(" "))
                 return Response.sql_injection;
-            if(str.equals(" "))
-                return Response.null_or_empty_data;
         }
         return "0";
     }
 
     public static Long getBonusTimeFromToken(String token){
 
-        Long output = 0L;
+        long output = 0L;
 
         for(int i=0;i<token.length();i++)
             output += (int)token.charAt(i);
@@ -65,11 +63,12 @@ public class Utils {
     }
 
     public static PreparedStatement getPreparedStatement(String initialQuery, List<String> args) throws SQLException {
+        initialQuery += " ";
         String[] parts = initialQuery.split("\\?");
         StringBuilder finalQuery = new StringBuilder();
 
         for(int i=0;i<args.size();i++)
-            finalQuery.append(parts[i]).append("'").append(args.get(i)).append("'");
+            finalQuery.append(parts[i])/*.append("'")*/.append(args.get(i))/*.append("'")*/;
 
         finalQuery.append(parts[parts.length-1]);
 
@@ -89,6 +88,8 @@ public class Utils {
     }
 
     public static String customEncode(String rawData){
+
+        rawData = encodeBase64(rawData);
 
         List<Integer> var1 = new ArrayList<>();
         List<Integer> var2 = new ArrayList<>();
@@ -143,7 +144,7 @@ public class Utils {
                 encodedData.append(chars.get(var9));
         }
 
-        return (encodeBase64(String.valueOf(var5+1)) + (char) separatorCharacter + encodeBase64(String.valueOf((int)Math.pow(var1.get(0), var5+1))) + (char) separatorCharacter + encodedData);
+        return encodeBase64(String.valueOf(var5+1)) + (char) separatorCharacter + encodeBase64(String.valueOf((int)Math.pow(var1.get(0), var5+1))) + (char) separatorCharacter + encodedData;
     }
 
 
@@ -179,7 +180,7 @@ public class Utils {
         for(int var6 : var5)
             output.append((char) var6);
 
-        return output.toString();
+        return decodeBase64(output.toString());
 
     }
 
