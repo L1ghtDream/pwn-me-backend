@@ -131,6 +131,7 @@ public class Utils {
                 var8.add((int) nullCharacter);
 
             Collections.reverse(var7);
+
             var8.add(var6);
             var8.addAll(var7);
         }
@@ -142,7 +143,7 @@ public class Utils {
                 encodedData.append(chars.get(var9));
         }
 
-        return (encodeBase64(String.valueOf(var5+1)) + (char) separatorCharacter + encodedData).replace("=", "");
+        return (encodeBase64(String.valueOf(var5+1)) + (char) separatorCharacter + encodeBase64(String.valueOf((int)Math.pow(var1.get(0), var5+1))) + (char) separatorCharacter + encodedData);
     }
 
 
@@ -150,9 +151,9 @@ public class Utils {
 
         String[] var1 = encodedData.split("\\?");
         int n = Integer.parseInt(decodeBase64(var1[0]));
-        String data = var1[1];
+        int firstData = Integer.parseInt(decodeBase64(var1[1]));
+        String data = var1[2];
         ArrayList<Integer> var3 = new ArrayList<>();
-
 
         for(int i=0;i<data.length()/n;i++){
             int var4 = 0;
@@ -168,13 +169,10 @@ public class Utils {
             return "";
 
         ArrayList<Integer> var5 = new ArrayList<>();
-        var5.add(0);
-        var5.add(var3.get(var3.size()-2)/var3.get(var3.size()-1));
-        var5.add(var3.get(1)/var3.get(0));
-        var5.set(0, var3.get(0)/var5.get(1));
-
-        for(int i=2;i<n-1;i++)
-            var5.add(var3.get(i)/var5.get(i)/var5.get(i-1));
+        var5.add((int) Math.pow(firstData, 1.0/n));
+        var5.add(var3.get(0)/var5.get(var5.size()-1));
+        for(int i = 1;i<var3.size()-1;i++)
+            var5.add(var3.get(i)/var5.get(var5.size()-1)/var5.get(var5.size()-2));
 
         StringBuilder output = new StringBuilder();
 
