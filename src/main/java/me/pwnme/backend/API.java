@@ -1,18 +1,18 @@
 package me.pwnme.backend;
 
 import com.google.gson.Gson;
-import com.mysql.jdbc.log.Log;
-import freemarker.template.*;
-import lombok.Data;
+import freemarker.template.Configuration;
+import freemarker.template.Template;
+import freemarker.template.TemplateException;
 import lombok.RequiredArgsConstructor;
-import me.pwnme.backend.Configuration.*;
+import me.pwnme.backend.Configuration.Config;
+import me.pwnme.backend.Configuration.ResetPasswordEmailProperties;
 import me.pwnme.backend.DTO.*;
 import me.pwnme.backend.Database.Database;
 import me.pwnme.backend.Services.MailService;
 import me.pwnme.backend.Utils.Response;
 import me.pwnme.backend.Utils.Utils;
 import org.assertj.core.annotations.Beta;
-import org.assertj.core.internal.bytebuddy.asm.Advice;
 import org.springframework.ui.freemarker.FreeMarkerTemplateUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,6 +25,7 @@ import java.util.*;
 
 @RestController
 @RequiredArgsConstructor
+@SuppressWarnings("unused")
 public class API {
 
     private final ResetPasswordEmailProperties resetPasswordEmailProperties;
@@ -141,7 +142,7 @@ public class API {
 
     @PostMapping("/api/secure/login/credentials")
     public String login(@RequestBody String data) {
-        return checkCredentials(new Gson().fromJson(Utils.customDecode(data), LoginBody.class));
+        return Utils.customEncode(checkCredentials(new Gson().fromJson(Utils.customDecode(data), LoginBody.class)));
     }
 
     @PostMapping("/api/secure/login/token")
@@ -151,7 +152,7 @@ public class API {
 
         String vulns = Utils.checkForVulns(Collections.singletonList(body.token));
         if(!vulns.equals(Response.ok))
-            return vulns;
+            return Utils.customEncode(vulns);
 
         Token token = new Gson().fromJson(Utils.decodeBase64(body.token), Token.class);
 
@@ -160,11 +161,11 @@ public class API {
         loginBody.email = token.email;
 
         if(Long.parseLong(token.timeExpire) < new Date().getTime())
-            return Response.token_expired;
+            return Utils.customEncode(Response.token_expired);
         if(Long.parseLong(token.timeExpire)-Long.parseLong(token.timeCreated) != 259200000L + Utils.getBonusTimeFromToken(token.password))
-            return Response.invalid_token;
+            return Utils.customEncode(Response.invalid_token);
 
-        return checkCredentials(loginBody);
+        return Utils.customEncode(checkCredentials(loginBody));
     }
 
     @PostMapping("/api/secure/register")
@@ -175,7 +176,7 @@ public class API {
 
             String vulns = Utils.checkForVulns(Arrays.asList(body.email, body.password));
             if(!vulns.equals(Response.ok))
-                return vulns;
+                return Utils.customEncode(vulns);
 
             ResultSet result = Utils.getPreparedStatement("SELECT COUNT(*) FROM `?` WHERE EMAIL='?'", Arrays.asList(Database.usersTable, body.email)).executeQuery();
 
@@ -183,14 +184,14 @@ public class API {
                 if(result.getInt("COUNT(*)")==0){
                     Utils.getPreparedStatement("INSERT INTO '?' VALUES ('?', '?')", Arrays.asList(Database.usersTable, body.email, body.password)).executeUpdate();
                     long time = new Date().getTime();
-                    return Response.ok + " " + Utils.encodeBase64(Utils.craftToken(body.email, String.valueOf(time),  String.valueOf(time + 259200000L + Utils.getBonusTimeFromToken(body.password)), body.password));
+                    return Utils.customEncode(Response.ok + " " + Utils.encodeBase64(Utils.craftToken(body.email, String.valueOf(time),  String.valueOf(time + 259200000L + Utils.getBonusTimeFromToken(body.password)), body.password)));
                 }
-                return Response.email_already_exists;
+                return Utils.customEncode(Response.email_already_exists);
             }
-            return Response.internal_error;
+            return Utils.customEncode(Response.internal_error);
         } catch (SQLException e) {
             e.printStackTrace();
-            return Response.internal_error;
+            return Utils.customEncode(Response.internal_error);
         }
     }
 
@@ -202,7 +203,7 @@ public class API {
 
             String vulns = Utils.checkForVulns(Collections.singletonList(body.email));
             if (!vulns.equals(Response.ok))
-                return vulns;
+                return Utils.customEncode(vulns);
 
             LoginBody loginBody = new LoginBody();
             loginBody.password = body.password;
@@ -219,15 +220,15 @@ public class API {
                     output = output.replace("{1}", resultSet.getString("LEVEL"));
                     output = output.replace("{2}", resultSet.getString("POINTS"));
 
-                    return Response.ok + " " + output;
+                    return Utils.customEncode(Response.ok + " " + output);
                 }
-                return Response.email_does_not_exist;
+                return Utils.customEncode(Response.email_does_not_exist);
             } else
-                return response;
+                return Utils.customEncode(response);
         }
-        catch (SQLException throwables) {
-            throwables.printStackTrace();
-            return Response.internal_error;
+        catch (SQLException e) {
+            e.printStackTrace();
+            return Utils.customEncode(Response.internal_error);
         }
     }
 
@@ -411,4 +412,5 @@ public class API {
             return Response.internal_error;
         }
     }
+
 }
