@@ -107,6 +107,10 @@ public class Utils {
         for(int i=0;i<rawData.length();i++)
             var1.add((int) rawData.charAt(i));
 
+        //TODO: Impl in client
+        if(var1.size()<3)
+            return rawData;
+
         for(int i=0;i<var1.size();i++){
             if(i==0)
                 var2.add(var1.get(i) * var1.get(i+1));
@@ -154,6 +158,9 @@ public class Utils {
     public static String customDecode(String encodedData){
 
         String[] var1 = encodedData.split("\\?");
+        //TODO: Impl in client
+        if(var1.length == 1)
+            return encodedData;
         int n = Integer.parseInt(decodeBase64(var1[0]));
         int firstData = Integer.parseInt(decodeBase64(var1[1]));
         String data = var1[2];
@@ -169,8 +176,10 @@ public class Utils {
             var3.add(var4);
         }
 
-        if(var3.size()<3)
-            return "";
+        //TODO: Impl in client
+        if(var3.size()==2)
+            return encodedData;
+
 
         ArrayList<Integer> var5 = new ArrayList<>();
         var5.add((int) Math.pow(firstData, 1.0/n));
