@@ -3,6 +3,7 @@ package me.pwnme.backend;
 import com.google.gson.Gson;
 import com.mysql.jdbc.log.Log;
 import freemarker.template.*;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import me.pwnme.backend.Configuration.*;
 import me.pwnme.backend.DTO.*;
@@ -193,6 +194,44 @@ public class API {
         }
     }
 
+    @PostMapping("/api/secure/get-save-data")
+    public String getSaveData(@RequestBody String data){
+
+        try {
+            SaveDataRequestCredentialsBody body  = new Gson().fromJson(Utils.customDecode(data), SaveDataRequestCredentialsBody.class);
+
+            String vulns = Utils.checkForVulns(Collections.singletonList(body.email));
+            if (!vulns.equals(Response.ok))
+                return vulns;
+
+            LoginBody loginBody = new LoginBody();
+            loginBody.password = body.password;
+            loginBody.email = body.email;
+
+            String response = checkCredentials(loginBody);
+
+            if (response.equals(Response.ok)) {
+                ResultSet resultSet = Utils.getPreparedStatement("SELECT * FROM `?` WHERE EMAIL='?'", Arrays.asList(Database.saveDataTable, body.email)).executeQuery();
+
+                if (resultSet.next()) {
+                    String output = "{\"level\": \"{1}\",\"points\": \"{2}\"}";
+
+                    output = output.replace("{1}", resultSet.getString("LEVEL"));
+                    output = output.replace("{2}", resultSet.getString("POINTS"));
+
+                    return Response.ok + " " + output;
+                }
+                return Response.email_does_not_exist;
+            } else
+                return response;
+        }
+        catch (SQLException throwables) {
+            throwables.printStackTrace();
+            return Response.internal_error;
+        }
+    }
+
+
 
     //------------------------------ To Be Secured ------------------------------
 
@@ -343,30 +382,6 @@ public class API {
 
 
     //------------------------------ In Dev ------------------------------
-    @Beta //TODO: Update to the new me.pwnme.backend.API || Secure the connection with the custom encode
-    @PostMapping("/reset-password")
-    public String getSaveData(@RequestBody SaveDataRequestCredentialsBody body){
-
-        String vulns = Utils.checkForVulns(Collections.singletonList(body.email));
-        if(!vulns.equals(Response.ok))
-            return vulns;
-
-        LoginBody loginBody = new LoginBody();
-        loginBody.password = body.password;
-        loginBody.email = body.email;
-
-        String response = checkCredentials(loginBody);
-
-        if(response.equals(Response.ok)){
-
-        }
-        else
-            return response;
-
-
-
-
-    }
 
 
     private String checkCredentials(LoginBody body) {
