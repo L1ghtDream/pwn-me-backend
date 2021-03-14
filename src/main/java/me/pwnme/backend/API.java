@@ -399,17 +399,17 @@ public class API {
                 if(result1.getInt("COUNT(*)")==1) {
                     if (result.getString("PASSWORD").equals(body.password)) {
                         long time = new Date().getTime();
-                        return Response.ok + " " + Utils.encodeBase64(Utils.craftToken(body.email, String.valueOf(time), String.valueOf(time + 259200000L + Utils.getBonusTimeFromToken(body.password)), body.password));
+                        return Utils.customEncode(Response.ok + " " + Utils.encodeBase64(Utils.craftToken(body.email, String.valueOf(time), String.valueOf(time + 259200000L + Utils.getBonusTimeFromToken(body.password)), body.password)));
                     }
-                    return Response.invalid_credentials;
+                    return Utils.customEncode(Response.invalid_credentials);
                 }
-                return Response.multiple_accounts_on_email;
+                return Utils.customEncode(Response.multiple_accounts_on_email);
             }
-            return Response.email_does_not_exist;
+            return Utils.customEncode(Response.email_does_not_exist);
 
         } catch (SQLException e) {
             e.printStackTrace();
-            return Response.internal_error;
+            return Utils.customEncode(Response.internal_error);
         }
     }
 
