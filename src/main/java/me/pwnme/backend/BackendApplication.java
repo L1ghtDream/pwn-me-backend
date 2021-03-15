@@ -9,10 +9,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class BackendApplication {
 
 	public static void main(String[] args) {
-		System.out.println(Utils.encodeBase64("1"));
-		System.out.println(Utils.customEncode("1"));
-		System.out.println(Utils.customDecode(Utils.customEncode("1")));
-		System.out.println(Utils.customDecode("Mw==?NDU2NTMz?2nN2nN"));
 		Database.sqlSetup();
 		SpringApplication.run(BackendApplication.class, args);
 	}

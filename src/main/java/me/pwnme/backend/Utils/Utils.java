@@ -107,7 +107,6 @@ public class Utils {
         for(int i=0;i<rawData.length();i++)
             var1.add((int) rawData.charAt(i));
 
-        //TODO: Impl in client
         if(var1.size()<3)
             return rawData;
 
@@ -130,7 +129,7 @@ public class Utils {
 
         for(Integer var6 : var2){
             List<Integer> var7 = new ArrayList<>();
-            while(var6>chars.size()){
+            while(var6>=chars.size()){
                 var7.add(var6%chars.size());
                 var6/=chars.size();
             }
@@ -158,7 +157,6 @@ public class Utils {
     public static String customDecode(String encodedData){
 
         String[] var1 = encodedData.split("\\?");
-        //TODO: Impl in client
         if(var1.length == 1)
             return encodedData;
         int n = Integer.parseInt(decodeBase64(var1[0]));
@@ -175,8 +173,6 @@ public class Utils {
             }
             var3.add(var4);
         }
-
-        //TODO: Impl in client
         if(var3.size()==2)
             return encodedData;
 
