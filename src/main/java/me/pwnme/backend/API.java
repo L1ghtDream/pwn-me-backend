@@ -182,7 +182,7 @@ public class API {
 
             if(result.next()){
                 if(result.getInt("COUNT(*)")==0){
-                    Utils.getPreparedStatement("INSERT INTO '?' VALUES ('?', '?')", Arrays.asList(Database.usersTable, body.email, body.password)).executeUpdate();
+                    Utils.getPreparedStatement("INSERT INTO `?` VALUES ('?', '?')", Arrays.asList(Database.usersTable, body.email, body.password)).executeUpdate();
                     long time = new Date().getTime();
                     return Utils.customEncode(Response.ok + " " + Utils.encodeBase64(Utils.craftToken(body.email, String.valueOf(time),  String.valueOf(time + 259200000L + Utils.getBonusTimeFromToken(body.password)), body.password)));
                 }

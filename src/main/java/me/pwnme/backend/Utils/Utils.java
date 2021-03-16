@@ -158,7 +158,7 @@ public class Utils {
 
         String[] var1 = encodedData.split("\\?");
         if(var1.length == 1)
-            return encodedData;
+            return decodeBase64(encodedData);
         int n = Integer.parseInt(decodeBase64(var1[0]));
         int firstData = Integer.parseInt(decodeBase64(var1[1]));
         String data = var1[2];
@@ -174,7 +174,7 @@ public class Utils {
             var3.add(var4);
         }
         if(var3.size()==2)
-            return encodedData;
+            return decodeBase64(encodedData);
 
 
         ArrayList<Integer> var5 = new ArrayList<>();
