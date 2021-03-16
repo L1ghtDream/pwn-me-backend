@@ -232,25 +232,17 @@ public class API {
         }
     }
 
+    @PostMapping("/api/secure/forgot-password")
+    public String forgotPassword(@RequestBody String data){
 
-
-    //------------------------------ To Be Secured ------------------------------
-
-    @Beta //TODO: Update to the new me.pwnme.backend.API || Add expire date atribute to reset password token
-    @PostMapping("/api/forgot-password")
-    public String forgotPassword(@RequestBody ForgotPasswordBody body){
-
-        //TODO: Recode
         try {
+            ForgotPasswordBody body = new Gson().fromJson(Utils.customDecode(data), ForgotPasswordBody.class);
+
             String vulns = Utils.checkForVulns(Collections.singletonList(body.email));
             if(!vulns.equals(Response.ok))
-                return vulns;
+                return Utils.customEncode(vulns);
 
-            String query = "SELECT COUNT(*) FROM `{table}` WHERE EMAIL='{email}'";
-            query = query.replace("{table}", Database.usersTable);
-            query = query.replace("{email}", body.email);
-            PreparedStatement st = Database.connection.prepareStatement(query);
-            ResultSet result = st.executeQuery();
+            ResultSet result = Utils.getPreparedStatement("SELECT COUNT(*) FROM `?` WHERE EMAIL='?'", Arrays.asList(Database.usersTable, body.email)).executeQuery();
 
             if(result.next()){
                 if(result.getInt("COUNT(*)")==1){
@@ -258,49 +250,23 @@ public class API {
                     String token = "";
                     while(generateToken) {
                         token = Utils.generateRandomString(32);
-                        query = "SELECT COUNT(*) FROM `{table}` WHERE TOKEN='{token}'";
-                        query = query.replace("{table}", Database.passwordResetTokenTable);
-                        query = query.replace("{token}", token);
-                        st = Database.connection.prepareStatement(query);
-                        result = st.executeQuery();
+                        result = Utils.getPreparedStatement("SELECT COUNT(*) FROM `?` WHERE TOKEN='?'", Arrays.asList(Database.usersTable, token)).executeQuery();
 
                         if(result.next())
                             if(result.getInt("COUNT(*)") == 0)
                                 generateToken = false;
                     }
 
-                    query = "SELECT COUNT(*) FROM `{table}` WHERE EMAIL='{email}'";
-                    query = query.replace("{table}", Database.passwordResetTokenTable);
-                    query = query.replace("{email}", body.email);
-                    st = Database.connection.prepareStatement(query);
-                    result = st.executeQuery();
+                    result = Utils.getPreparedStatement("SELECT COUNT(*) FROM `?` WHERE EMAIL='?'", Arrays.asList(Database.passwordResetTokenTable, body.email)).executeQuery();
 
                     if(result.next()){
                         if(result.getInt("COUNT(*)")==0)
-                            query = "INSERT INTO `{table}` VALUES ('{email}', '{token}', '{date}')";
-                        else {
-                            query = "UPDATE `{table}` SET DATE='{date}' WHERE EMAIL='{email}'";
-                            query = query.replace("{table}", Database.passwordResetTokenTable);
-                            query = query.replace("{email}", body.email);
-                            query = query.replace("{token}", token);
-                            query = query.replace("{date}", String.valueOf(new Date().getTime()));
-
-                            st = Database.connection.prepareStatement(query);
-                            st.executeUpdate();
-
-                            query = "UPDATE `{table}` SET TOKEN='{token}' WHERE EMAIL='{email}'";
-                        }
-
-                        query = query.replace("{table}", Database.passwordResetTokenTable);
-                        query = query.replace("{email}", body.email);
-                        query = query.replace("{token}", token);
-                        query = query.replace("{date}", String.valueOf(new Date().getTime()));
-
-                        st = Database.connection.prepareStatement(query);
-                        st.executeUpdate();
+                            Utils.getPreparedStatement("INSERT INTO `?` VALUES ('?', '?', '?')", Arrays.asList(Database.passwordResetTokenTable, body.email, token, String.valueOf(new Date().getTime()))).executeUpdate();
+                        else
+                            Utils.getPreparedStatement("UPDATE `{table}` SET TOKEN='{token}' WHERE EMAIL='{email}'", Arrays.asList(Database.passwordResetTokenTable, token, body.email)).executeUpdate();
                     }
                     else
-                        return Response.internal_error;
+                        return Utils.customEncode(Response.internal_error);
 
                     Map<String, Object> placeholders = new HashMap<>();
                     placeholders.put("name", "Anonymous");
@@ -308,18 +274,21 @@ public class API {
                     placeholders.put("token", token);
 
                     mailService.sendMail(new Mail(resetPasswordEmailProperties.from, body.email, resetPasswordEmailProperties.subject), "reset-password-mail.ftl", placeholders);
-                    return Response.ok;
+                    return Utils.customEncode(Response.ok);
                 }
-                return Response.multiple_accounts_on_email;
+                return Utils.customEncode(Response.multiple_accounts_on_email);
             }
-            return Response.email_does_not_exist;
+            return Utils.customEncode(Response.email_does_not_exist);
 
 
         } catch (SQLException | IOException | TemplateException | MessagingException e) {
             e.printStackTrace();
+            return Utils.customEncode(Response.internal_error);
         }
-        return Response.internal_error;
     }
+
+
+    //------------------------------ To Be Secured ------------------------------
 
     @Beta //TODO: Update to the new me.pwnme.backend.API
     @GetMapping("/reset-password")
@@ -383,7 +352,7 @@ public class API {
 
 
     //------------------------------ In Dev ------------------------------
-
+    //NONE
 
     private String checkCredentials(LoginBody body) {
         try {
