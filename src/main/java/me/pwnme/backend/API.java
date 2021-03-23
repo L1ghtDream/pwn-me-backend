@@ -33,111 +33,6 @@ public class API {
     private final Config config;
     private final Configuration freemarkerConfiguration;
 
-    //------------------------------ Legacy ------------------------------
-
-    @Deprecated
-    @PostMapping("/api/legacy/login/credentials")
-    public String loginLegacy(@RequestBody LoginBody body) {
-
-        try {
-            String vulns = Utils.checkForVulns(Arrays.asList(body.password, body.email));
-            if(!vulns.equals(Response.ok))
-                return vulns;
-
-            ResultSet result = Utils.getPreparedStatement("SELECT * FROM `?` WHERE EMAIL='?'", Arrays.asList(Database.usersTable, body.email)).executeQuery();
-            ResultSet result1 = Utils.getPreparedStatement("SELECT COUNT(*) FROM `?` WHERE EMAIL='?'", Arrays.asList(Database.usersTable, body.email)).executeQuery();
-
-            if(result.next() && result1.next()){
-                if(result1.getInt("COUNT(*)")==1) {
-                    if (result.getString("PASSWORD").equals(body.password)) {
-                        long time = new Date().getTime();
-                        return Response.ok + " " + Utils.encodeBase64(Utils.craftToken(body.email, String.valueOf(time), String.valueOf(time + 259200000L + Utils.getBonusTimeFromToken(body.password)), body.password));
-                    }
-                    return Response.invalid_credentials;
-                }
-                return Response.multiple_accounts_on_email;
-            }
-            return Response.email_does_not_exist;
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return Response.internal_error;
-        }
-    }
-
-    @Deprecated
-    @PostMapping("/api/legacy/login/token")
-    public String loginTokenLegacy(@RequestBody LoginTokenBody body) {
-
-        try {
-            String vulns = Utils.checkForVulns(Collections.singletonList(body.token));
-            if(!vulns.equals(Response.ok))
-                return vulns;
-
-            Gson gson = new Gson();
-
-            Token token = gson.fromJson(Utils.decodeBase64(body.token), Token.class);
-
-            vulns = Utils.checkForVulns(Arrays.asList(token.password, token.email));
-            if(!vulns.equals(Response.ok))
-                return vulns;
-
-            ResultSet result = Utils.getPreparedStatement("SELECT COUNT(*) FROM `?` WHERE EMAIL='?'", Arrays.asList(Database.usersTable, token.email)).executeQuery();
-
-            if(result.next()){
-                if(result.getInt("COUNT(*)") == 1){
-
-                    if(Long.parseLong(token.timeExpire) < new Date().getTime())
-                        return Response.token_expired;
-                    if(Long.parseLong(token.timeExpire)-Long.parseLong(token.timeCreated) != 259200000L + Utils.getBonusTimeFromToken(token.password))
-                        return Response.invalid_token;
-
-                    result = Utils.getPreparedStatement("SELECT PASSWORD FROM `?` WHERE EMAIL='?'", Arrays.asList(Database.usersTable, token.email)).executeQuery();
-
-                    if(result.next()){
-                        if(result.getString("PASSWORD").equals(token.password))
-                            return Response.ok;
-                        return Response.invalid_credentials;
-                    }
-                    return Response.email_does_not_exist;
-                }
-                return Response.multiple_accounts_on_email;
-            }
-            return Response.email_does_not_exist;
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return Response.internal_error;
-        }
-    }
-
-    @Deprecated
-    @PostMapping("/api/legacy/register")
-    public String registerLegacy(@RequestBody RegisterBody body){
-
-        try {
-
-            String vulns = Utils.checkForVulns(Arrays.asList(body.email, body.password));
-            if(!vulns.equals(Response.ok))
-                return vulns;
-
-            ResultSet result = Utils.getPreparedStatement("SELECT COUNT(*) FROM `?` WHERE EMAIL='?'", Arrays.asList(Database.usersTable, body.email)).executeQuery();
-
-            if(result.next()){
-                if(result.getInt("COUNT(*)")==0){
-                    Utils.getPreparedStatement("INSERT INTO '?' VALUES ('?', '?')", Arrays.asList(Database.usersTable, body.email, body.password)).executeUpdate();
-                    long time = new Date().getTime();
-                    return Response.ok + " " + Utils.encodeBase64(Utils.craftToken(body.email, String.valueOf(time),  String.valueOf(time + 259200000L + Utils.getBonusTimeFromToken(body.password)), body.password));
-                }
-                return Response.email_already_exists;
-            }
-            return Response.internal_error;
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return Response.internal_error;
-        }
-    }
-
-
     //------------------------------ Secure ------------------------------
 
     @PostMapping("/api/secure/login/credentials")
@@ -178,11 +73,11 @@ public class API {
             if(!vulns.equals(Response.ok))
                 return Utils.customEncode(vulns);
 
-            ResultSet result = Utils.getPreparedStatement("SELECT COUNT(*) FROM `?` WHERE EMAIL='?'", Arrays.asList(Database.usersTable, body.email)).executeQuery();
+            ResultSet result = Utils.getPreparedStatement("SELECT COUNT(*) FROM %table% WHERE EMAIL=?", Database.usersTable, body.email).executeQuery();
 
             if(result.next()){
                 if(result.getInt("COUNT(*)")==0){
-                    Utils.getPreparedStatement("INSERT INTO `?` VALUES ('?', '?')", Arrays.asList(Database.usersTable, body.email, body.password)).executeUpdate();
+                    Utils.getPreparedStatement("INSERT INTO %table% VALUES (?, ?)", Database.usersTable, body.email, body.password).executeUpdate();
                     long time = new Date().getTime();
                     return Utils.customEncode(Response.ok + " " + Utils.encodeBase64(Utils.craftToken(body.email, String.valueOf(time),  String.valueOf(time + 259200000L + Utils.getBonusTimeFromToken(body.password)), body.password)));
                 }
@@ -212,7 +107,7 @@ public class API {
             String response = checkCredentials(loginBody);
 
             if (response.equals(Response.ok)) {
-                ResultSet resultSet = Utils.getPreparedStatement("SELECT * FROM `?` WHERE EMAIL='?'", Arrays.asList(Database.saveDataTable, body.email)).executeQuery();
+                ResultSet resultSet = Utils.getPreparedStatement("SELECT * FROM %table% WHERE EMAIL=?", Database.saveDataTable, body.email).executeQuery();
 
                 if (resultSet.next()) {
                     String output = "{\"level\": \"{1}\",\"points\": \"{2}\"}";
@@ -242,7 +137,7 @@ public class API {
             if(!vulns.equals(Response.ok))
                 return Utils.customEncode(vulns);
 
-            ResultSet result = Utils.getPreparedStatement("SELECT COUNT(*) FROM `?` WHERE EMAIL='?'", Arrays.asList(Database.usersTable, body.email)).executeQuery();
+            ResultSet result = Utils.getPreparedStatement("SELECT COUNT(*) FROM %table% WHERE EMAIL=?", Database.usersTable, body.email).executeQuery();
 
             if(result.next()){
                 if(result.getInt("COUNT(*)")==1){
@@ -250,20 +145,20 @@ public class API {
                     String token = "";
                     while(generateToken) {
                         token = Utils.generateRandomString(32);
-                        result = Utils.getPreparedStatement("SELECT COUNT(*) FROM `?` WHERE TOKEN='?'", Arrays.asList(Database.usersTable, token)).executeQuery();
+                        result = Utils.getPreparedStatement("SELECT COUNT(*) FROM %table% WHERE TOKEN=?", Database.usersTable, token).executeQuery();
 
                         if(result.next())
                             if(result.getInt("COUNT(*)") == 0)
                                 generateToken = false;
                     }
 
-                    result = Utils.getPreparedStatement("SELECT COUNT(*) FROM `?` WHERE EMAIL='?'", Arrays.asList(Database.passwordResetTokenTable, body.email)).executeQuery();
+                    result = Utils.getPreparedStatement("SELECT COUNT(*) FROM %table% WHERE EMAIL=?", Database.passwordResetTokenTable, body.email).executeQuery();
 
                     if(result.next()){
                         if(result.getInt("COUNT(*)")==0)
-                            Utils.getPreparedStatement("INSERT INTO `?` VALUES ('?', '?', '?')", Arrays.asList(Database.passwordResetTokenTable, body.email, token, String.valueOf(new Date().getTime()))).executeUpdate();
+                            Utils.getPreparedStatement("INSERT INTO %table% VALUES (?, ?, ?)", Database.passwordResetTokenTable, body.email, token, String.valueOf(new Date().getTime())).executeUpdate();
                         else
-                            Utils.getPreparedStatement("UPDATE `{table}` SET TOKEN='{token}' WHERE EMAIL='{email}'", Arrays.asList(Database.passwordResetTokenTable, token, body.email)).executeUpdate();
+                            Utils.getPreparedStatement("UPDATE `{table}` SET TOKEN='{token}' WHERE EMAIL='{email}'", Database.passwordResetTokenTable, token, body.email).executeUpdate();
                     }
                     else
                         return Utils.customEncode(Response.internal_error);
@@ -361,18 +256,17 @@ public class API {
             if(!vulns.equals(Response.ok))
                 return vulns;
 
-            ResultSet result = Utils.getPreparedStatement("SELECT * FROM `?` WHERE EMAIL='?'", Arrays.asList(Database.usersTable, body.email)).executeQuery();
-            ResultSet result1 = Utils.getPreparedStatement("SELECT COUNT(*) FROM `?` WHERE EMAIL='?'", Arrays.asList(Database.usersTable, body.email)).executeQuery();
+            ResultSet result = Utils.getPreparedStatement("SELECT COUNT(*),PASSWORD FROM %table% WHERE EMAIL=?", Database.usersTable, body.email).executeQuery();
 
-            if(result.next() && result1.next()){
-                if(result1.getInt("COUNT(*)")==1) {
+            if(result.next()){
+                if(result.getInt("COUNT(*)")==1) {
                     if (result.getString("PASSWORD").equals(body.password)) {
                         long time = new Date().getTime();
                         return Response.ok + " " + Utils.encodeBase64(Utils.craftToken(body.email, String.valueOf(time), String.valueOf(time + 259200000L + Utils.getBonusTimeFromToken(body.password)), body.password));
                     }
                     return Response.invalid_credentials;
                 }
-                return Response.multiple_accounts_on_email;
+                return Response.email_does_not_exist;
             }
             return Response.email_does_not_exist;
 

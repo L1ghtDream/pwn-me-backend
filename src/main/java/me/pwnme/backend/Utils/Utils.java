@@ -45,12 +45,8 @@ public class Utils {
 
     public static String checkForVulns(List<String> check){
         for(String str : check){
-            if(str == null)
+            if(str == null || str.equals(""))
                 return Response.null_or_empty_data;
-            if(str.contains("%"))
-                return Response.string_format;
-            if(str.contains(" "))
-                return Response.sql_injection;
         }
         return "0";
     }
@@ -65,18 +61,15 @@ public class Utils {
         return output;
     }
 
-    public static PreparedStatement getPreparedStatement(String initialQuery, List<String> args) throws SQLException {
-        initialQuery += " ";
-        String[] parts = initialQuery.split("\\?");
-        StringBuilder finalQuery = new StringBuilder();
+    public static PreparedStatement getPreparedStatement(String initialQuery, String table, String ...args) throws SQLException {
 
-        for(int i=0;i<args.size();i++)
-            finalQuery.append(parts[i])/*.append("'")*/.append(args.get(i))/*.append("'")*/;
+        PreparedStatement st = Database.connection.prepareStatement(initialQuery.replace("%tabele%", table));
 
-        finalQuery.append(parts[parts.length-1]);
+        for(int i=0;i<args.length;i++){
+            st.setString(i, args[i]);
+        }
 
-        return Database.connection.prepareStatement(finalQuery.toString());
-
+        return st;
     }
 
     public static String craftToken(String arg0, String arg1, String arg2, String arg3){
@@ -152,7 +145,6 @@ public class Utils {
 
         return encodeBase64(String.valueOf(var5+1)) + (char) separatorCharacter + encodeBase64(String.valueOf((int)Math.pow(var1.get(0), var5+1))) + (char) separatorCharacter + encodedData;
     }
-
 
     public static String customDecode(String encodedData){
 
