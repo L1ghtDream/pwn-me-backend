@@ -44,42 +44,41 @@ public class API {
     public String loginToken(@RequestBody String data) {
 
         LoginTokenBody body = new Gson().fromJson(Utils.customDecode(data), LoginTokenBody.class);
-
-        String vulns = Utils.checkForVulns(Collections.singletonList(body.token));
-        if(!vulns.equals(Response.ok))
-            return Utils.customEncode(vulns);
-
         Token token = new Gson().fromJson(Utils.decodeBase64(body.token), Token.class);
+
+        String vulns = Utils.checkForVulns(Arrays.asList(body.token, token.email, token.password, token.timeExpire, token.timeCreated));
+        if (!vulns.equals(Response.ok))
+            return Utils.customEncode(vulns);
 
         LoginBody loginBody = new LoginBody();
         loginBody.password = token.password;
         loginBody.email = token.email;
 
-        if(Long.parseLong(token.timeExpire) < new Date().getTime())
+        if (Long.parseLong(token.timeExpire) < new Date().getTime())
             return Utils.customEncode(Response.token_expired);
-        if(Long.parseLong(token.timeExpire)-Long.parseLong(token.timeCreated) != 259200000L + Utils.getBonusTimeFromToken(token.password))
+        if (Long.parseLong(token.timeExpire) - Long.parseLong(token.timeCreated) != 259200000L + Utils.getBonusTimeFromToken(token.password))
             return Utils.customEncode(Response.invalid_token);
 
         return Utils.customEncode(checkCredentials(loginBody));
     }
 
     @PostMapping("/api/secure/register")
-    public String register(@RequestBody String data){
+    public String register(@RequestBody String data) {
 
         try {
             RegisterBody body = new Gson().fromJson(Utils.customDecode(data), RegisterBody.class);
 
             String vulns = Utils.checkForVulns(Arrays.asList(body.email, body.password));
-            if(!vulns.equals(Response.ok))
+            if (!vulns.equals(Response.ok))
                 return Utils.customEncode(vulns);
 
             ResultSet result = Utils.getPreparedStatement("SELECT COUNT(*) FROM %table% WHERE EMAIL=?", Database.usersTable, body.email).executeQuery();
 
-            if(result.next()){
-                if(result.getInt("COUNT(*)")==0){
+            if (result.next()) {
+                if (result.getInt("COUNT(*)") == 0) {
                     Utils.getPreparedStatement("INSERT INTO %table% VALUES (?, ?)", Database.usersTable, body.email, body.password).executeUpdate();
                     long time = new Date().getTime();
-                    return Utils.customEncode(Response.ok + " " + Utils.encodeBase64(Utils.craftToken(body.email, String.valueOf(time),  String.valueOf(time + 259200000L + Utils.getBonusTimeFromToken(body.password)), body.password)));
+                    return Utils.customEncode(Response.ok + " " + Utils.encodeBase64(Utils.craftToken(body.email, String.valueOf(time), String.valueOf(time + 259200000L + Utils.getBonusTimeFromToken(body.password)), body.password)));
                 }
                 return Utils.customEncode(Response.email_already_exists);
             }
@@ -91,23 +90,24 @@ public class API {
     }
 
     @PostMapping("/api/secure/get-save-data")
-    public String getSaveData(@RequestBody String data){
+    public String getSaveData(@RequestBody String data) {
 
         try {
-            SaveDataRequestCredentialsBody body  = new Gson().fromJson(Utils.customDecode(data), SaveDataRequestCredentialsBody.class);
+            GetSaveDataRequestBody body = new Gson().fromJson(Utils.customDecode(data), GetSaveDataRequestBody.class);
+            Token token = new Gson().fromJson(Utils.decodeBase64(body.token), Token.class);
 
-            String vulns = Utils.checkForVulns(Collections.singletonList(body.email));
+            String vulns = Utils.checkForVulns(Arrays.asList(body.token, token.email, token.password, token.timeExpire, token.timeCreated));
             if (!vulns.equals(Response.ok))
                 return Utils.customEncode(vulns);
 
             LoginBody loginBody = new LoginBody();
-            loginBody.password = body.password;
-            loginBody.email = body.email;
+            loginBody.password = token.password;
+            loginBody.email = token.email;
 
             String response = checkCredentials(loginBody);
 
             if (response.equals(Response.ok)) {
-                ResultSet resultSet = Utils.getPreparedStatement("SELECT * FROM %table% WHERE EMAIL=?", Database.saveDataTable, body.email).executeQuery();
+                ResultSet resultSet = Utils.getPreparedStatement("SELECT * FROM %table% WHERE EMAIL=?", Database.saveDataTable, loginBody.email).executeQuery();
 
                 if (resultSet.next()) {
                     String output = "{\"level\": \"{1}\",\"points\": \"{2}\"}";
@@ -120,47 +120,124 @@ public class API {
                 return Utils.customEncode(Response.email_does_not_exist);
             } else
                 return Utils.customEncode(response);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return Utils.customEncode(Response.internal_error);
         }
-        catch (SQLException e) {
+    }
+
+    @PostMapping("/api/secure/reset-progress")
+    public String resetProgress(@RequestBody String data) {
+
+        try {
+            GetSaveDataRequestBody body = new Gson().fromJson(Utils.customDecode(data), GetSaveDataRequestBody.class);
+            Token token = new Gson().fromJson(Utils.decodeBase64(body.token), Token.class);
+
+            String vulns = Utils.checkForVulns(Arrays.asList(body.token, token.email, token.password, token.timeExpire, token.timeCreated));
+            if (!vulns.equals(Response.ok))
+                return Utils.customEncode(vulns);
+
+            LoginBody loginBody = new LoginBody();
+            loginBody.password = token.password;
+            loginBody.email = token.email;
+
+            String response = checkCredentials(loginBody);
+
+            if (response.equals(Response.ok)) {
+                ResultSet resultSet = Utils.getPreparedStatement("SELECT COUNT(*) FROM %table% WHERE EMAIL=?", Database.saveDataTable, loginBody.email).executeQuery();
+
+                if (resultSet.next()) {
+                    if(resultSet.getInt("COUNT(*)") == 0)
+                        Utils.getPreparedStatement("INSERT INTO %table% VALUES(?, ?, ?)", Database.saveDataTable, loginBody.email, "0", "0").executeUpdate();
+                    else
+                        Utils.getPreparedStatement("UPDATE %table% SET LEVEL=?, POINTS=? WHERE EMAIL=?", Database.saveDataTable, "0", "0", loginBody.email).executeUpdate();
+                    return Utils.customEncode(Response.ok);
+                }
+                else {
+                    Utils.getPreparedStatement("UPDATE %table% SET LEVEL=?, POINTS=? WHERE EMAIL=?", Database.saveDataTable, "0", "0", loginBody.email).executeUpdate();
+                    return Utils.customEncode(Response.ok);
+                }
+            } else
+                return Utils.customEncode(response);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return Utils.customEncode(Response.internal_error);
+        }
+    }
+
+    @PostMapping("/api/secure/save-progress")
+    public String saveProgress(@RequestBody String data) {
+
+        try {
+            LevelUpRequestBody body = new Gson().fromJson(Utils.customDecode(data), LevelUpRequestBody.class);
+            Token token = new Gson().fromJson(Utils.decodeBase64(body.token), Token.class);
+
+            String vulns = Utils.checkForVulns(Arrays.asList(body.token, token.email, token.password, token.timeExpire, token.timeCreated));
+            if (!vulns.equals(Response.ok))
+                return Utils.customEncode(vulns);
+
+            LoginBody loginBody = new LoginBody();
+            loginBody.password = token.password;
+            loginBody.email = token.email;
+
+            String response = checkCredentials(loginBody);
+
+            if (response.equals(Response.ok)) {
+                ResultSet resultSet = Utils.getPreparedStatement("SELECT COUNT(*) FROM %table% WHERE EMAIL=?", Database.saveDataTable, loginBody.email).executeQuery();
+
+                if (resultSet.next()) {
+                    ResultSet resultSet1 = Utils.getPreparedStatement("SELECT LEVEL FROM %table% WHERE EMAIL=?", Database.saveDataTable, loginBody.email).executeQuery();
+                    int level;
+                    if(resultSet1.next())
+                        level = Integer.parseInt(resultSet1.getString("LEVEL"));
+                    else
+                        return Utils.customEncode(Response.email_does_not_exist);
+                    Utils.getPreparedStatement("UPDATE %table% SET LEVEL=? WHERE EMAIL=?", Database.saveDataTable, String.valueOf(level), loginBody.email).executeUpdate();
+                    return Utils.customEncode(Response.ok);
+                }
+                return Utils.customEncode(Response.email_does_not_exist);
+
+            } else
+                return Utils.customEncode(response);
+        } catch (SQLException e) {
             e.printStackTrace();
             return Utils.customEncode(Response.internal_error);
         }
     }
 
     @PostMapping("/api/secure/forgot-password")
-    public String forgotPassword(@RequestBody String data){
+    public String forgotPassword(@RequestBody String data) {
 
         try {
             ForgotPasswordBody body = new Gson().fromJson(Utils.customDecode(data), ForgotPasswordBody.class);
 
             String vulns = Utils.checkForVulns(Collections.singletonList(body.email));
-            if(!vulns.equals(Response.ok))
+            if (!vulns.equals(Response.ok))
                 return Utils.customEncode(vulns);
 
             ResultSet result = Utils.getPreparedStatement("SELECT COUNT(*) FROM %table% WHERE EMAIL=?", Database.usersTable, body.email).executeQuery();
 
-            if(result.next()){
-                if(result.getInt("COUNT(*)")==1){
+            if (result.next()) {
+                if (result.getInt("COUNT(*)") == 1) {
                     boolean generateToken = true;
                     String token = "";
-                    while(generateToken) {
+                    while (generateToken) {
                         token = Utils.generateRandomString(32);
                         result = Utils.getPreparedStatement("SELECT COUNT(*) FROM %table% WHERE TOKEN=?", Database.usersTable, token).executeQuery();
 
-                        if(result.next())
-                            if(result.getInt("COUNT(*)") == 0)
+                        if (result.next())
+                            if (result.getInt("COUNT(*)") == 0)
                                 generateToken = false;
                     }
 
                     result = Utils.getPreparedStatement("SELECT COUNT(*) FROM %table% WHERE EMAIL=?", Database.passwordResetTokenTable, body.email).executeQuery();
 
-                    if(result.next()){
-                        if(result.getInt("COUNT(*)")==0)
+                    if (result.next()) {
+                        if (result.getInt("COUNT(*)") == 0)
                             Utils.getPreparedStatement("INSERT INTO %table% VALUES (?, ?, ?)", Database.passwordResetTokenTable, body.email, token, String.valueOf(new Date().getTime())).executeUpdate();
                         else
                             Utils.getPreparedStatement("UPDATE `{table}` SET TOKEN='{token}' WHERE EMAIL='{email}'", Database.passwordResetTokenTable, token, body.email).executeUpdate();
-                    }
-                    else
+                    } else
                         return Utils.customEncode(Response.internal_error);
 
                     Map<String, Object> placeholders = new HashMap<>();
@@ -187,13 +264,13 @@ public class API {
 
     @Beta //TODO: Update to the new me.pwnme.backend.API
     @GetMapping("/reset-password")
-    public String resetPasswordMessage(@RequestParam String token){
+    public String resetPasswordMessage(@RequestParam String token) {
 
         //TODO: Create the web portal for password reset
 
         try {
             String vulns = Utils.checkForVulns(Collections.singletonList(token));
-            if(!vulns.equals(Response.ok))
+            if (!vulns.equals(Response.ok))
                 return vulns;
 
             String query = "SELECT COUNT(*) FROM `{table}` WHERE TOKEN='{token}'";
@@ -202,8 +279,8 @@ public class API {
             PreparedStatement st = Database.connection.prepareStatement(query);
             ResultSet result = st.executeQuery();
 
-            if(result.next()){
-                if(result.getInt("COUNT(*)") == 1){
+            if (result.next()) {
+                if (result.getInt("COUNT(*)") == 1) {
                     Template template = freemarkerConfiguration.getTemplate("reset-password.ftl");
                     String html = FreeMarkerTemplateUtils.processTemplateIntoString(template, new HashMap<String, Object>());
                     html = html.replace("{token}", token);
@@ -221,23 +298,23 @@ public class API {
 
     @Beta //TODO: Update to the new me.pwnme.backend.API
     @PostMapping("/api/reset-password")
-    public String resetPassword(@RequestBody ResetPasswordBody body){
+    public String resetPassword(@RequestBody ResetPasswordBody body) {
 
         //try {
-            if(body.token.contains(" "))
-                return "-1";
-            if(body.token.contains("%"))
-                return "-3";
-            if(body.email.contains(" "))
-                return "-1";
-            if(body.email.contains("%"))
-                return "-3";
-            if(body.newPassword.contains(" "))
-                return "-1";
-            if(body.newPassword.contains("%"))
-                return "-3";
+        if (body.token.contains(" "))
+            return "-1";
+        if (body.token.contains("%"))
+            return "-3";
+        if (body.email.contains(" "))
+            return "-1";
+        if (body.email.contains("%"))
+            return "-3";
+        if (body.newPassword.contains(" "))
+            return "-1";
+        if (body.newPassword.contains("%"))
+            return "-3";
 
-            return "0";
+        return "0";
 
         //} catch (SQLException | IOException | TemplateException e) {
         //    e.printStackTrace();
@@ -253,13 +330,13 @@ public class API {
         try {
 
             String vulns = Utils.checkForVulns(Arrays.asList(body.password, body.email));
-            if(!vulns.equals(Response.ok))
+            if (!vulns.equals(Response.ok))
                 return vulns;
 
             ResultSet result = Utils.getPreparedStatement("SELECT COUNT(*),PASSWORD FROM %table% WHERE EMAIL=?", Database.usersTable, body.email).executeQuery();
 
-            if(result.next()){
-                if(result.getInt("COUNT(*)")==1) {
+            if (result.next()) {
+                if (result.getInt("COUNT(*)") == 1) {
                     if (result.getString("PASSWORD").equals(body.password)) {
                         long time = new Date().getTime();
                         return Response.ok + " " + Utils.encodeBase64(Utils.craftToken(body.email, String.valueOf(time), String.valueOf(time + 259200000L + Utils.getBonusTimeFromToken(body.password)), body.password));
