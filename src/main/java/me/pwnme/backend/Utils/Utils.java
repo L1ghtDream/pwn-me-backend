@@ -14,11 +14,11 @@ public class Utils {
     private static int separatorCharacter = 63;
 
     //Crypto
-    public static String encodeBase64(String rawData){
+    public static String encodeBase64(String rawData) {
         return Base64.getEncoder().encodeToString(rawData.getBytes());
     }
 
-    public static String decodeBase64(String encodedData){
+    public static String decodeBase64(String encodedData) {
         return new String(Base64.getDecoder().decode(encodedData));
     }
 
@@ -26,13 +26,13 @@ public class Utils {
 
         StringBuilder output = new StringBuilder();
 
-        for(int i=0;i<length;i++){
+        for (int i = 0; i < length; i++) {
             int index;
-            int chose = getRandomNumber(1,100);
-            if(chose%2==0)
+            int chose = getRandomNumber(1, 100);
+            if (chose % 2 == 0)
                 index = getRandomNumber(65, 90);
             else
-                index = getRandomNumber(97,112);
+                index = getRandomNumber(97, 112);
             output.append((char) index);
         }
 
@@ -43,36 +43,36 @@ public class Utils {
         return (int) ((Math.random() * (max - min)) + min);
     }
 
-    public static String checkForVulns(List<String> check){
-        for(String str : check){
-            if(str == null || str.equals(""))
+    public static String checkForVulns(List<String> check) {
+        for (String str : check) {
+            if (str == null || str.equals(""))
                 return Response.null_or_empty_data;
         }
         return "0";
     }
 
-    public static Long getBonusTimeFromToken(String token){
+    public static Long getBonusTimeFromToken(String token) {
 
         long output = 0L;
 
-        for(int i=0;i<token.length();i++)
-            output += (int)token.charAt(i);
+        for (int i = 0; i < token.length(); i++)
+            output += (int) token.charAt(i);
 
         return output;
     }
 
-    public static PreparedStatement getPreparedStatement(String initialQuery, String table, String ...args) throws SQLException {
+    public static PreparedStatement getPreparedStatement(String initialQuery, String table, String... args) throws SQLException {
 
-        PreparedStatement st = Database.connection.prepareStatement(initialQuery.replace("%tabele%", table));
+        PreparedStatement st = Database.connection.prepareStatement(initialQuery.replace("%table%", table));
 
-        for(int i=0;i<args.length;i++){
-            st.setString(i, args[i]);
+        for (int i = 0; i < args.length; i++) {
+            st.setString(i + 1, args[i]);
         }
 
         return st;
     }
 
-    public static String craftToken(String arg0, String arg1, String arg2, String arg3){
+    public static String craftToken(String arg0, String arg1, String arg2, String arg3) {
         String token = "{\"email\": \"{1}\",\"timeCreated\": \"{2}\",\"timeExpire\": \"{3}\",\"password\": \"{4}\"}";
 
         token = token.replace("{1}", arg0);
@@ -83,7 +83,7 @@ public class Utils {
         return token;
     }
 
-    public static String customEncode(String rawData){
+    public static String customEncode(String rawData) {
 
         rawData = encodeBase64(rawData);
 
@@ -97,37 +97,37 @@ public class Utils {
 
         rawData = rawData.replace("=", "");
 
-        for(int i=0;i<rawData.length();i++)
+        for (int i = 0; i < rawData.length(); i++)
             var1.add((int) rawData.charAt(i));
 
-        if(var1.size()<3)
+        if (var1.size() < 3)
             return rawData;
 
-        for(int i=0;i<var1.size();i++){
-            if(i==0)
-                var2.add(var1.get(i) * var1.get(i+1));
-            else if (i == var1.size()-1)
-                var2.add(var1.get(i) * var1.get(i-1));
+        for (int i = 0; i < var1.size(); i++) {
+            if (i == 0)
+                var2.add(var1.get(i) * var1.get(i + 1));
+            else if (i == var1.size() - 1)
+                var2.add(var1.get(i) * var1.get(i - 1));
             else
-                var2.add(var1.get(i-1) * var1.get(i) * var1.get(i+1));
+                var2.add(var1.get(i - 1) * var1.get(i) * var1.get(i + 1));
         }
 
-        for(Integer var6 : var2)
+        for (Integer var6 : var2)
             var4 = Math.max(var4, var6);
 
-        while(var4>chars.size()){
+        while (var4 > chars.size()) {
             var4 /= chars.size();
             var5++;
         }
 
-        for(Integer var6 : var2){
+        for (Integer var6 : var2) {
             List<Integer> var7 = new ArrayList<>();
-            while(var6>=chars.size()){
-                var7.add(var6%chars.size());
-                var6/=chars.size();
+            while (var6 >= chars.size()) {
+                var7.add(var6 % chars.size());
+                var6 /= chars.size();
             }
 
-            for(int i=0;i<var5-var7.size();i++)
+            for (int i = 0; i < var5 - var7.size(); i++)
                 var8.add((int) nullCharacter);
 
             Collections.reverse(var7);
@@ -136,48 +136,48 @@ public class Utils {
             var8.addAll(var7);
         }
 
-        for(Integer var9 : var8){
-            if(var9 == 64)
+        for (Integer var9 : var8) {
+            if (var9 == 64)
                 encodedData.append(nullCharacter);
             else
                 encodedData.append(chars.get(var9));
         }
 
-        return encodeBase64(String.valueOf(var5+1)) + (char) separatorCharacter + encodeBase64(String.valueOf((int)Math.pow(var1.get(0), var5+1))) + (char) separatorCharacter + encodedData;
+        return encodeBase64(String.valueOf(var5 + 1)) + (char) separatorCharacter + encodeBase64(String.valueOf((int) Math.pow(var1.get(0), var5 + 1))) + (char) separatorCharacter + encodedData;
     }
 
-    public static String customDecode(String encodedData){
+    public static String customDecode(String encodedData) {
 
         String[] var1 = encodedData.split("\\?");
-        if(var1.length == 1)
+        if (var1.length == 1)
             return decodeBase64(encodedData);
         int n = Integer.parseInt(decodeBase64(var1[0]));
         int firstData = Integer.parseInt(decodeBase64(var1[1]));
         String data = var1[2];
         ArrayList<Integer> var3 = new ArrayList<>();
 
-        for(int i=0;i<data.length()/n;i++){
+        for (int i = 0; i < data.length() / n; i++) {
             int var4 = 0;
-            for(int j=0;j<n;j++){
+            for (int j = 0; j < n; j++) {
                 char var5 = data.charAt(i * n + j);
-                if(var5 != nullCharacter)
-                    var4 += Math.pow(chars.size(), n-j-1) * chars.indexOf(var5);
+                if (var5 != nullCharacter)
+                    var4 += Math.pow(chars.size(), n - j - 1) * chars.indexOf(var5);
             }
             var3.add(var4);
         }
-        if(var3.size()==2)
+        if (var3.size() == 2)
             return decodeBase64(encodedData);
 
 
         ArrayList<Integer> var5 = new ArrayList<>();
-        var5.add((int) Math.pow(firstData, 1.0/n));
-        var5.add(var3.get(0)/var5.get(var5.size()-1));
-        for(int i = 1;i<var3.size()-1;i++)
-            var5.add(var3.get(i)/var5.get(var5.size()-1)/var5.get(var5.size()-2));
+        var5.add((int) Math.pow(firstData, 1.0 / n));
+        var5.add(var3.get(0) / var5.get(var5.size() - 1));
+        for (int i = 1; i < var3.size() - 1; i++)
+            var5.add(var3.get(i) / var5.get(var5.size() - 1) / var5.get(var5.size() - 2));
 
         StringBuilder output = new StringBuilder();
 
-        for(int var6 : var5)
+        for (int var6 : var5)
             output.append((char) var6);
 
         return decodeBase64(output.toString());

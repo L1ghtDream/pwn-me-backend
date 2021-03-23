@@ -147,13 +147,12 @@ public class API {
                 ResultSet resultSet = Utils.getPreparedStatement("SELECT COUNT(*) FROM %table% WHERE EMAIL=?", Database.saveDataTable, loginBody.email).executeQuery();
 
                 if (resultSet.next()) {
-                    if(resultSet.getInt("COUNT(*)") == 0)
+                    if (resultSet.getInt("COUNT(*)") == 0)
                         Utils.getPreparedStatement("INSERT INTO %table% VALUES(?, ?, ?)", Database.saveDataTable, loginBody.email, "0", "0").executeUpdate();
                     else
                         Utils.getPreparedStatement("UPDATE %table% SET LEVEL=?, POINTS=? WHERE EMAIL=?", Database.saveDataTable, "0", "0", loginBody.email).executeUpdate();
                     return Utils.customEncode(Response.ok);
-                }
-                else {
+                } else {
                     Utils.getPreparedStatement("UPDATE %table% SET LEVEL=?, POINTS=? WHERE EMAIL=?", Database.saveDataTable, "0", "0", loginBody.email).executeUpdate();
                     return Utils.customEncode(Response.ok);
                 }
@@ -188,7 +187,7 @@ public class API {
                 if (resultSet.next()) {
                     ResultSet resultSet1 = Utils.getPreparedStatement("SELECT LEVEL FROM %table% WHERE EMAIL=?", Database.saveDataTable, loginBody.email).executeQuery();
                     int level;
-                    if(resultSet1.next())
+                    if (resultSet1.next())
                         level = Integer.parseInt(resultSet1.getString("LEVEL"));
                     else
                         return Utils.customEncode(Response.email_does_not_exist);
