@@ -89,7 +89,7 @@ public class API {
         }
     }
 
-    @PostMapping("/api/secure/get-save-data")
+    @PostMapping("/api/secure/get-progress")
     public String getSaveData(@RequestBody String data) {
 
         try {
