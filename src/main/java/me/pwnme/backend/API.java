@@ -90,7 +90,7 @@ public class API {
     }
 
     @PostMapping("/api/secure/get-progress")
-    public String getSaveData(@RequestBody String data) {
+    public String getProgress(@RequestBody String data) {
 
         try {
             GetSaveDataRequestBody body = new Gson().fromJson(Utils.customDecode(data), GetSaveDataRequestBody.class);
@@ -110,12 +110,12 @@ public class API {
                 ResultSet resultSet = Utils.getPreparedStatement("SELECT * FROM %table% WHERE EMAIL=?", Database.saveDataTable, loginBody.email).executeQuery();
 
                 if (resultSet.next()) {
-                    String output = "{\"level\": \"{1}\",\"points\": \"{2}\"}";
 
-                    output = output.replace("{1}", resultSet.getString("LEVEL"));
-                    output = output.replace("{2}", resultSet.getString("POINTS"));
+                    Progress progress = new Progress();
+                    progress.level = Integer.parseInt(resultSet.getString("LEVEL"));
+                    progress.points = Integer.parseInt(resultSet.getString("POINTS"));
 
-                    return Utils.customEncode(Response.ok + " " + output);
+                    return Utils.customEncode(Response.ok + " " + Utils.encodeBase64(new Gson().toJson(progress)));
                 }
                 return Utils.customEncode(Response.email_does_not_exist);
             } else
@@ -314,11 +314,7 @@ public class API {
             return "-3";
 
         return "0";
-
-        //} catch (SQLException | IOException | TemplateException e) {
-        //    e.printStackTrace();
-        //}
-        //return "-2";
+        
     }
 
 
