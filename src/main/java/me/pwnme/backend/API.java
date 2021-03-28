@@ -22,6 +22,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @RestController
 @RequiredArgsConstructor
@@ -327,6 +329,11 @@ public class API {
             String vulns = Utils.checkForVulns(Arrays.asList(body.password, body.email));
             if (!vulns.equals(Response.ok))
                 return vulns;
+
+            String emailRegex = "^(.+)@(.+)$";
+
+            if(!Pattern.compile(emailRegex).matcher(body.email).matches())
+                return Response.invalid_email_format;
 
             ResultSet result = Utils.getPreparedStatement("SELECT COUNT(*),PASSWORD FROM %table% WHERE EMAIL=?", Database.usersTable, body.email).executeQuery();
 

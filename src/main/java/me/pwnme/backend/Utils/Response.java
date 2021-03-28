@@ -10,6 +10,7 @@ public class Response {
     public static final String invalid_token = "5";
     public static final String multiple_accounts_on_email = "6";
     public static final String token_expired = "7";
+    public static final String invalid_email_format = "8";
     public static final String internal_error = "-2";
 
 }
