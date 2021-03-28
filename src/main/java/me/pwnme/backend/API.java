@@ -338,9 +338,9 @@ public class API {
                     }
                     return Response.invalid_credentials;
                 }
-                return Response.email_does_not_exist;
+                return Response.invalid_credentials;
             }
-            return Response.email_does_not_exist;
+            return Response.invalid_credentials;
 
         } catch (SQLException e) {
             e.printStackTrace();
