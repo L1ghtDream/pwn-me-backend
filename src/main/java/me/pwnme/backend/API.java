@@ -22,7 +22,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @RestController
@@ -316,7 +315,7 @@ public class API {
             return "-3";
 
         return "0";
-        
+
     }
 
 
@@ -332,7 +331,7 @@ public class API {
 
             String emailRegex = "^(.+)@(.+)$";
 
-            if(!Pattern.compile(emailRegex).matcher(body.email).matches())
+            if (!Pattern.compile(emailRegex).matcher(body.email).matches())
                 return Response.invalid_email_format;
 
             ResultSet result = Utils.getPreparedStatement("SELECT COUNT(*),PASSWORD FROM %table% WHERE EMAIL=?", Database.usersTable, body.email).executeQuery();
