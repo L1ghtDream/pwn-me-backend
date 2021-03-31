@@ -12,6 +12,8 @@ public class Response {
     public static final String token_expired = "7";
     public static final String invalid_email_format = "8";
     public static final String passwords_does_not_match = "9"; //Never Used: Only for claiming purposes.
+    public static final String progress_saved = "10";
+    public static final String progress_not_saved = "-1";
     public static final String internal_error = "-2";
 
 }

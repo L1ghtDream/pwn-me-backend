@@ -29,6 +29,8 @@ import java.util.regex.Pattern;
 @SuppressWarnings("unused")
 public class API {
 
+    //TODO: Include the IP in the token so can be easier verified
+
     private final ResetPasswordEmailProperties resetPasswordEmailProperties;
     private final MailService mailService;
     private final Config config;
@@ -152,11 +154,10 @@ public class API {
                         Utils.getPreparedStatement("INSERT INTO %table% VALUES(?, ?, ?)", Database.saveDataTable, loginBody.email, "0", "0").executeUpdate();
                     else
                         Utils.getPreparedStatement("UPDATE %table% SET LEVEL=?, POINTS=? WHERE EMAIL=?", Database.saveDataTable, "0", "0", loginBody.email).executeUpdate();
-                    return Utils.customEncode(Response.ok);
-                } else {
+                } else
                     Utils.getPreparedStatement("UPDATE %table% SET LEVEL=?, POINTS=? WHERE EMAIL=?", Database.saveDataTable, "0", "0", loginBody.email).executeUpdate();
-                    return Utils.customEncode(Response.ok);
-                }
+
+                return Utils.customEncode(Response.ok);
             } else
                 return Utils.customEncode(response);
         } catch (SQLException e) {
@@ -174,7 +175,7 @@ public class API {
 
             String vulns = Utils.checkForVulns(Arrays.asList(body.token, token.email, token.password, token.timeExpire, token.timeCreated));
             if (!vulns.equals(Response.ok))
-                return Utils.customEncode(vulns);
+                return Utils.customEncode(Response.progress_not_saved);
 
             LoginBody loginBody = new LoginBody();
             loginBody.password = token.password;
@@ -191,18 +192,16 @@ public class API {
                     if (resultSet1.next())
                         level = Integer.parseInt(resultSet1.getString("LEVEL"));
                     else
-                        return Utils.customEncode(Response.email_does_not_exist);
+                        return Utils.customEncode(Response.progress_not_saved);
                     Utils.getPreparedStatement("UPDATE %table% SET LEVEL=? WHERE EMAIL=?", Database.saveDataTable, String.valueOf(level), loginBody.email).executeUpdate();
-                    return Utils.customEncode(Response.ok);
+                    return Utils.customEncode(Response.progress_saved);
                 }
-                return Utils.customEncode(Response.email_does_not_exist);
-
-            } else
-                return Utils.customEncode(response);
+            }
         } catch (SQLException e) {
             e.printStackTrace();
-            return Utils.customEncode(Response.internal_error);
         }
+        return Utils.customEncode(Response.progress_not_saved);
+
     }
 
     @PostMapping("/api/secure/forgot-password")
